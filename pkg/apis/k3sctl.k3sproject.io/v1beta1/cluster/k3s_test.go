@@ -772,3 +772,536 @@ preflight:
 	assert.True(t, k.Preflight.CheckDisk)
 	assert.Equal(t, 10, k.Preflight.MinDiskGB)
 }
+
+func TestGenerateServerConfig_NetworkConfig(t *testing.T) {
+	k := &K3s{
+		Network: &NetworkConfig{
+			ClusterCIDR:       []string{"10.42.0.0/16", "fd42::/48"},
+			ServiceCIDR:       []string{"10.43.0.0/16", "fd43::/112"},
+			ClusterDNS:        []string{"10.43.0.10"},
+			ClusterDomain:     "my.cluster",
+			NodePortRange:     "30000-40000",
+			FlannelBackend:    "wireguard-native",
+			FlannelIPv6Masq:   true,
+			FlannelExternalIP: true,
+			EgressSelectorMode: "cluster",
+			ServiceLBNamespace: "lb-ns",
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, "10.42.0.0/16,fd42::/48", config["cluster-cidr"])
+	assert.Equal(t, "10.43.0.0/16,fd43::/112", config["service-cidr"])
+	assert.Equal(t, "10.43.0.10", config["cluster-dns"])
+	assert.Equal(t, "my.cluster", config["cluster-domain"])
+	assert.Equal(t, "30000-40000", config["service-node-port-range"])
+	assert.Equal(t, "wireguard-native", config["flannel-backend"])
+	assert.Equal(t, true, config["flannel-ipv6-masq"])
+	assert.Equal(t, true, config["flannel-external-ip"])
+	assert.Equal(t, "cluster", config["egress-selector-mode"])
+	assert.Equal(t, "lb-ns", config["servicelb-namespace"])
+}
+
+func TestGenerateServerConfig_NetworkConfig_Nil(t *testing.T) {
+	k := &K3s{}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	_, has := config["cluster-cidr"]
+	assert.False(t, has)
+}
+
+func TestGenerateServerConfig_DisableConfig(t *testing.T) {
+	k := &K3s{
+		Disable: &DisableConfig{
+			Components:      []string{"traefik", "servicelb", "metrics-server"},
+			Scheduler:       true,
+			CloudController: true,
+			KubeProxy:       true,
+			NetworkPolicy:   true,
+			HelmController:  true,
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	components, ok := config["disable"].([]interface{})
+	require.True(t, ok)
+	assert.Len(t, components, 3)
+	assert.Equal(t, true, config["disable-scheduler"])
+	assert.Equal(t, true, config["disable-cloud-controller"])
+	assert.Equal(t, true, config["disable-kube-proxy"])
+	assert.Equal(t, true, config["disable-network-policy"])
+	assert.Equal(t, true, config["disable-helm-controller"])
+}
+
+func TestGenerateServerConfig_TLSConfig(t *testing.T) {
+	k := &K3s{
+		TLS: &TLSConfig{
+			SANs:        []string{"lb.example.com", "10.0.0.100"},
+			SANSecurity: true,
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	sans, ok := config["tls-san"].([]interface{})
+	require.True(t, ok)
+	assert.Len(t, sans, 2)
+	assert.Equal(t, "lb.example.com", sans[0])
+	assert.Equal(t, "10.0.0.100", sans[1])
+	assert.Equal(t, true, config["tls-san-security"])
+}
+
+func TestGenerateServerConfig_KubeconfigConfig(t *testing.T) {
+	k := &K3s{
+		Kubeconfig: &KubeconfigConfig{
+			Mode:  "644",
+			Group: "admin",
+			Name:  "my-cluster",
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, "644", config["write-kubeconfig-mode"])
+	assert.Equal(t, "admin", config["write-kubeconfig-group"])
+	assert.Equal(t, "my-cluster", config["write-kubeconfig-name"])
+}
+
+func TestGenerateServerConfig_DatastoreConfig(t *testing.T) {
+	k := &K3s{
+		Datastore: &DatastoreConfig{
+			Endpoint: "postgres://user:pass@db:5432/k3s",
+			CAFile:   "/etc/ssl/ca.pem",
+			CertFile: "/etc/ssl/cert.pem",
+			KeyFile:  "/etc/ssl/key.pem",
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, "postgres://user:pass@db:5432/k3s", config["datastore-endpoint"])
+	assert.Equal(t, "/etc/ssl/ca.pem", config["datastore-cafile"])
+	assert.Equal(t, "/etc/ssl/cert.pem", config["datastore-certfile"])
+	assert.Equal(t, "/etc/ssl/key.pem", config["datastore-keyfile"])
+}
+
+func TestGenerateServerConfig_ServerListenerConfig(t *testing.T) {
+	k := &K3s{
+		Server: &ServerConfig{
+			AdvertiseAddress: "10.0.0.50",
+			AdvertisePort:    6443,
+			BindAddress:      "0.0.0.0",
+			HTTPSPort:        6443,
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, "10.0.0.50", config["advertise-address"])
+	assert.Equal(t, 6443, config["advertise-port"])
+	assert.Equal(t, "0.0.0.0", config["bind-address"])
+	assert.Equal(t, 6443, config["https-listen-port"])
+}
+
+func TestGenerateServerConfig_SecurityConfig(t *testing.T) {
+	k := &K3s{
+		Security: &SecurityConfig{
+			SELinux:               true,
+			ProtectKernelDefaults: true,
+			EncryptionProvider:    "secretbox",
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, true, config["selinux"])
+	assert.Equal(t, true, config["protect-kernel-defaults"])
+	assert.Equal(t, "secretbox", config["secrets-encryption-provider"])
+}
+
+func TestGenerateServerConfig_ComponentArgs(t *testing.T) {
+	k := &K3s{
+		ComponentArgs: &ComponentArgsConfig{
+			KubeAPIServer:             []string{"--audit-log-path=/var/log/audit.log"},
+			KubeControllerManager:     []string{"--node-cidr-mask-size=24"},
+			KubeScheduler:             []string{"--config=/etc/scheduler.yaml"},
+			KubeCloudControllerManager: []string{"--cloud-provider=external"},
+			Kubelet:                   []string{"--max-pods=110"},
+			KubeProxy:                 []string{"--proxy-mode=ipvs"},
+			Etcd:                      []string{"--quota-backend-bytes=8589934592"},
+			HelmController:            []string{"--default-job-image=rancher/klipper-helm:v0.8.0"},
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	apiArgs, ok := config["kube-apiserver-arg"].([]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "--audit-log-path=/var/log/audit.log", apiArgs[0])
+
+	ctrlArgs, ok := config["kube-controller-manager-arg"].([]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "--node-cidr-mask-size=24", ctrlArgs[0])
+
+	schedArgs, ok := config["kube-scheduler-arg"].([]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "--config=/etc/scheduler.yaml", schedArgs[0])
+
+	ccmArgs, ok := config["kube-cloud-controller-manager-arg"].([]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "--cloud-provider=external", ccmArgs[0])
+
+	kubeletArgs, ok := config["kubelet-arg"].([]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "--max-pods=110", kubeletArgs[0])
+
+	proxyArgs, ok := config["kube-proxy-arg"].([]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "--proxy-mode=ipvs", proxyArgs[0])
+
+	etcdArgs, ok := config["etcd-arg"].([]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "--quota-backend-bytes=8589934592", etcdArgs[0])
+
+	helmArgs, ok := config["helm-controller-arg"].([]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "--default-job-image=rancher/klipper-helm:v0.8.0", helmArgs[0])
+}
+
+func TestGenerateAgentConfig_ComponentArgs(t *testing.T) {
+	k := &K3s{
+		ComponentArgs: &ComponentArgsConfig{
+			KubeAPIServer:  []string{"--audit-log-path=/var/log/audit.log"},
+			Kubelet:        []string{"--max-pods=110"},
+			KubeProxy:      []string{"--proxy-mode=ipvs"},
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleAgent}
+
+	data, err := k.GenerateAgentConfig(host, "10.0.0.1", "token")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	// Agent should get kubelet and kube-proxy args, but NOT server-only args
+	kubeletArgs, ok := config["kubelet-arg"].([]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "--max-pods=110", kubeletArgs[0])
+
+	proxyArgs, ok := config["kube-proxy-arg"].([]interface{})
+	require.True(t, ok)
+	assert.Equal(t, "--proxy-mode=ipvs", proxyArgs[0])
+
+	_, hasAPI := config["kube-apiserver-arg"]
+	assert.False(t, hasAPI, "agent should not have kube-apiserver-arg")
+}
+
+func TestGenerateAgentConfig_SecurityConfig(t *testing.T) {
+	k := &K3s{
+		Security: &SecurityConfig{
+			SELinux:               true,
+			ProtectKernelDefaults: true,
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleAgent}
+
+	data, err := k.GenerateAgentConfig(host, "10.0.0.1", "token")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, true, config["selinux"])
+	assert.Equal(t, true, config["protect-kernel-defaults"])
+}
+
+func TestGenerateServerConfig_RuntimeConfig(t *testing.T) {
+	k := &K3s{
+		Runtime: &RuntimeConfig{
+			SystemDefaultRegistry: "registry.example.com",
+			PauseImage:            "registry.example.com/pause:3.9",
+			Snapshotter:           "stargz",
+			DefaultRuntime:        "nvidia",
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, "registry.example.com", config["system-default-registry"])
+	assert.Equal(t, "registry.example.com/pause:3.9", config["pause-image"])
+	assert.Equal(t, "stargz", config["snapshotter"])
+	assert.Equal(t, "nvidia", config["default-runtime"])
+}
+
+func TestK3sValidate_NetworkConfig(t *testing.T) {
+	tests := []struct {
+		name    string
+		k3s     K3s
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			"valid flannel backend",
+			K3s{Network: &NetworkConfig{FlannelBackend: "vxlan"}},
+			false, "",
+		},
+		{
+			"invalid flannel backend",
+			K3s{Network: &NetworkConfig{FlannelBackend: "invalid"}},
+			true, "flannelBackend",
+		},
+		{
+			"valid egress mode",
+			K3s{Network: &NetworkConfig{EgressSelectorMode: "cluster"}},
+			false, "",
+		},
+		{
+			"invalid egress mode",
+			K3s{Network: &NetworkConfig{EgressSelectorMode: "invalid"}},
+			true, "egressSelectorMode",
+		},
+		{
+			"nil network is valid",
+			K3s{},
+			false, "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.k3s.Validate()
+			if tt.wantErr {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
+func TestK3sValidate_DatastoreConfig(t *testing.T) {
+	t.Run("TLS files without endpoint", func(t *testing.T) {
+		k := K3s{Datastore: &DatastoreConfig{CAFile: "/ca.pem"}}
+		assert.Error(t, k.Validate())
+	})
+
+	t.Run("endpoint with TLS files", func(t *testing.T) {
+		k := K3s{Datastore: &DatastoreConfig{
+			Endpoint: "postgres://db:5432/k3s",
+			CAFile:   "/ca.pem",
+		}}
+		assert.NoError(t, k.Validate())
+	})
+
+	t.Run("endpoint without TLS", func(t *testing.T) {
+		k := K3s{Datastore: &DatastoreConfig{Endpoint: "postgres://db:5432/k3s"}}
+		assert.NoError(t, k.Validate())
+	})
+}
+
+func TestK3sValidate_SecurityConfig(t *testing.T) {
+	t.Run("valid provider aescbc", func(t *testing.T) {
+		k := K3s{Security: &SecurityConfig{EncryptionProvider: "aescbc"}}
+		assert.NoError(t, k.Validate())
+	})
+
+	t.Run("valid provider secretbox", func(t *testing.T) {
+		k := K3s{Security: &SecurityConfig{EncryptionProvider: "secretbox"}}
+		assert.NoError(t, k.Validate())
+	})
+
+	t.Run("invalid provider", func(t *testing.T) {
+		k := K3s{Security: &SecurityConfig{EncryptionProvider: "unknown"}}
+		err := k.Validate()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "encryptionProvider")
+	})
+}
+
+func TestK3sYAMLRoundTrip_NewFeatures(t *testing.T) {
+	input := `
+version: v1.31.0+k3s1
+network:
+  clusterCIDR:
+    - 10.42.0.0/16
+    - fd42::/48
+  serviceCIDR:
+    - 10.43.0.0/16
+  clusterDNS:
+    - 10.43.0.10
+  clusterDomain: my.cluster
+  nodePortRange: "30000-40000"
+  flannelBackend: wireguard-native
+  flannelIPv6Masq: true
+  flannelExternalIP: true
+  egressSelectorMode: cluster
+  serviceLBNamespace: lb-ns
+disable:
+  components:
+    - traefik
+    - servicelb
+  scheduler: true
+  kubeProxy: true
+  helmController: true
+tls:
+  sans:
+    - lb.example.com
+    - 10.0.0.100
+  sanSecurity: true
+kubeconfig:
+  mode: "644"
+  group: admin
+  name: my-cluster
+datastore:
+  endpoint: "postgres://db:5432/k3s"
+  caFile: /ca.pem
+  certFile: /cert.pem
+  keyFile: /key.pem
+server:
+  advertiseAddress: 10.0.0.50
+  advertisePort: 6443
+  bindAddress: 0.0.0.0
+  httpsPort: 6443
+security:
+  selinux: true
+  protectKernelDefaults: true
+  encryptionProvider: secretbox
+componentArgs:
+  kubeAPIServer:
+    - "--audit-log-path=/var/log/audit.log"
+  kubelet:
+    - "--max-pods=110"
+  etcd:
+    - "--quota-backend-bytes=8589934592"
+runtime:
+  systemDefaultRegistry: registry.example.com
+  pauseImage: registry.example.com/pause:3.9
+  snapshotter: stargz
+  defaultRuntime: nvidia
+`
+	var k K3s
+	require.NoError(t, yaml.Unmarshal([]byte(input), &k))
+
+	// Network
+	require.NotNil(t, k.Network)
+	assert.Equal(t, []string{"10.42.0.0/16", "fd42::/48"}, k.Network.ClusterCIDR)
+	assert.Equal(t, []string{"10.43.0.0/16"}, k.Network.ServiceCIDR)
+	assert.Equal(t, "my.cluster", k.Network.ClusterDomain)
+	assert.Equal(t, "wireguard-native", k.Network.FlannelBackend)
+	assert.True(t, k.Network.FlannelIPv6Masq)
+	assert.Equal(t, "cluster", k.Network.EgressSelectorMode)
+
+	// Disable
+	require.NotNil(t, k.Disable)
+	assert.Equal(t, []string{"traefik", "servicelb"}, k.Disable.Components)
+	assert.True(t, k.Disable.Scheduler)
+	assert.True(t, k.Disable.KubeProxy)
+	assert.True(t, k.Disable.HelmController)
+
+	// TLS
+	require.NotNil(t, k.TLS)
+	assert.Equal(t, []string{"lb.example.com", "10.0.0.100"}, k.TLS.SANs)
+	assert.True(t, k.TLS.SANSecurity)
+
+	// Kubeconfig
+	require.NotNil(t, k.Kubeconfig)
+	assert.Equal(t, "644", k.Kubeconfig.Mode)
+	assert.Equal(t, "admin", k.Kubeconfig.Group)
+	assert.Equal(t, "my-cluster", k.Kubeconfig.Name)
+
+	// Datastore
+	require.NotNil(t, k.Datastore)
+	assert.Equal(t, "postgres://db:5432/k3s", k.Datastore.Endpoint)
+	assert.Equal(t, "/ca.pem", k.Datastore.CAFile)
+
+	// Server
+	require.NotNil(t, k.Server)
+	assert.Equal(t, "10.0.0.50", k.Server.AdvertiseAddress)
+	assert.Equal(t, 6443, k.Server.AdvertisePort)
+
+	// Security
+	require.NotNil(t, k.Security)
+	assert.True(t, k.Security.SELinux)
+	assert.True(t, k.Security.ProtectKernelDefaults)
+	assert.Equal(t, "secretbox", k.Security.EncryptionProvider)
+
+	// ComponentArgs
+	require.NotNil(t, k.ComponentArgs)
+	assert.Equal(t, []string{"--audit-log-path=/var/log/audit.log"}, k.ComponentArgs.KubeAPIServer)
+	assert.Equal(t, []string{"--max-pods=110"}, k.ComponentArgs.Kubelet)
+	assert.Equal(t, []string{"--quota-backend-bytes=8589934592"}, k.ComponentArgs.Etcd)
+
+	// Runtime
+	require.NotNil(t, k.Runtime)
+	assert.Equal(t, "registry.example.com", k.Runtime.SystemDefaultRegistry)
+	assert.Equal(t, "registry.example.com/pause:3.9", k.Runtime.PauseImage)
+	assert.Equal(t, "stargz", k.Runtime.Snapshotter)
+	assert.Equal(t, "nvidia", k.Runtime.DefaultRuntime)
+}

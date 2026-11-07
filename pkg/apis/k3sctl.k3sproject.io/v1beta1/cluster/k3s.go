@@ -106,6 +106,77 @@ type HealthCheckConfig struct {
 	Timeout string `yaml:"timeout,omitempty"`
 }
 
+type NetworkConfig struct {
+	ClusterCIDR      []string `yaml:"clusterCIDR,omitempty"`
+	ServiceCIDR      []string `yaml:"serviceCIDR,omitempty"`
+	ClusterDNS       []string `yaml:"clusterDNS,omitempty"`
+	ClusterDomain    string   `yaml:"clusterDomain,omitempty"`
+	NodePortRange    string   `yaml:"nodePortRange,omitempty"`
+	FlannelBackend   string   `yaml:"flannelBackend,omitempty"`
+	FlannelIPv6Masq  bool     `yaml:"flannelIPv6Masq,omitempty"`
+	FlannelExternalIP bool    `yaml:"flannelExternalIP,omitempty"`
+	EgressSelectorMode string `yaml:"egressSelectorMode,omitempty"`
+	ServiceLBNamespace string `yaml:"serviceLBNamespace,omitempty"`
+}
+
+type DisableConfig struct {
+	Components       []string `yaml:"components,omitempty"`
+	Scheduler        bool     `yaml:"scheduler,omitempty"`
+	CloudController  bool     `yaml:"cloudController,omitempty"`
+	KubeProxy        bool     `yaml:"kubeProxy,omitempty"`
+	NetworkPolicy    bool     `yaml:"networkPolicy,omitempty"`
+	HelmController   bool     `yaml:"helmController,omitempty"`
+}
+
+type TLSConfig struct {
+	SANs        []string `yaml:"sans,omitempty"`
+	SANSecurity bool     `yaml:"sanSecurity,omitempty"`
+}
+
+type KubeconfigConfig struct {
+	Mode  string `yaml:"mode,omitempty"`
+	Group string `yaml:"group,omitempty"`
+	Name  string `yaml:"name,omitempty"`
+}
+
+type DatastoreConfig struct {
+	Endpoint string `yaml:"endpoint,omitempty"`
+	CAFile   string `yaml:"caFile,omitempty"`
+	CertFile string `yaml:"certFile,omitempty"`
+	KeyFile  string `yaml:"keyFile,omitempty"`
+}
+
+type ServerConfig struct {
+	AdvertiseAddress string `yaml:"advertiseAddress,omitempty"`
+	AdvertisePort    int    `yaml:"advertisePort,omitempty"`
+	BindAddress      string `yaml:"bindAddress,omitempty"`
+	HTTPSPort        int    `yaml:"httpsPort,omitempty"`
+}
+
+type SecurityConfig struct {
+	SELinux               bool   `yaml:"selinux,omitempty"`
+	ProtectKernelDefaults bool   `yaml:"protectKernelDefaults,omitempty"`
+	EncryptionProvider    string `yaml:"encryptionProvider,omitempty"`
+}
+
+type ComponentArgsConfig struct {
+	KubeAPIServer             []string `yaml:"kubeAPIServer,omitempty"`
+	KubeControllerManager     []string `yaml:"kubeControllerManager,omitempty"`
+	KubeScheduler             []string `yaml:"kubeScheduler,omitempty"`
+	KubeCloudControllerManager []string `yaml:"kubeCloudControllerManager,omitempty"`
+	Kubelet                   []string `yaml:"kubelet,omitempty"`
+	KubeProxy                 []string `yaml:"kubeProxy,omitempty"`
+	Etcd                      []string `yaml:"etcd,omitempty"`
+	HelmController            []string `yaml:"helmController,omitempty"`
+}
+
+type RuntimeConfig struct {
+	SystemDefaultRegistry string `yaml:"systemDefaultRegistry,omitempty"`
+	PauseImage            string `yaml:"pauseImage,omitempty"`
+	Snapshotter           string `yaml:"snapshotter,omitempty"`
+	DefaultRuntime        string `yaml:"defaultRuntime,omitempty"`
+}
+
 type K3s struct {
 	Version        string                `yaml:"version,omitempty"`
 	Config         dig.Mapping           `yaml:"config,omitempty"`
@@ -118,6 +189,15 @@ type K3s struct {
 	Airgap         *AirgapConfig         `yaml:"airgap,omitempty"`
 	Registries     *RegistriesConfig     `yaml:"registries,omitempty"`
 	HealthCheck    *HealthCheckConfig    `yaml:"healthCheck,omitempty"`
+	Network        *NetworkConfig        `yaml:"network,omitempty"`
+	Disable        *DisableConfig        `yaml:"disable,omitempty"`
+	TLS            *TLSConfig            `yaml:"tls,omitempty"`
+	Kubeconfig     *KubeconfigConfig     `yaml:"kubeconfig,omitempty"`
+	Datastore      *DatastoreConfig      `yaml:"datastore,omitempty"`
+	Server         *ServerConfig         `yaml:"server,omitempty"`
+	Security       *SecurityConfig       `yaml:"security,omitempty"`
+	ComponentArgs  *ComponentArgsConfig  `yaml:"componentArgs,omitempty"`
+	Runtime        *RuntimeConfig        `yaml:"runtime,omitempty"`
 	VersionString  string                `yaml:"-"`
 }
 
@@ -160,6 +240,31 @@ func (k *K3s) Validate() error {
 			return fmt.Errorf("etcdSnapshots.prune.retention must be > 0 when pruning is enabled")
 		}
 	}
+	if n := k.Network; n != nil {
+		validFlannelBackends := map[string]bool{
+			"none": true, "vxlan": true, "host-gw": true, "wireguard-native": true,
+		}
+		if n.FlannelBackend != "" && !validFlannelBackends[n.FlannelBackend] {
+			return fmt.Errorf("network.flannelBackend: invalid value %q (valid: none, vxlan, host-gw, wireguard-native)", n.FlannelBackend)
+		}
+		validEgressModes := map[string]bool{
+			"agent": true, "cluster": true, "pod": true, "disabled": true,
+		}
+		if n.EgressSelectorMode != "" && !validEgressModes[n.EgressSelectorMode] {
+			return fmt.Errorf("network.egressSelectorMode: invalid value %q (valid: agent, cluster, pod, disabled)", n.EgressSelectorMode)
+		}
+	}
+	if ds := k.Datastore; ds != nil {
+		if ds.Endpoint == "" && (ds.CAFile != "" || ds.CertFile != "" || ds.KeyFile != "") {
+			return fmt.Errorf("datastore.endpoint is required when TLS files are specified")
+		}
+	}
+	if sec := k.Security; sec != nil {
+		validProviders := map[string]bool{"aescbc": true, "secretbox": true}
+		if sec.EncryptionProvider != "" && !validProviders[sec.EncryptionProvider] {
+			return fmt.Errorf("security.encryptionProvider: invalid value %q (valid: aescbc, secretbox)", sec.EncryptionProvider)
+		}
+	}
 	return nil
 }
 
@@ -192,6 +297,15 @@ func (k *K3s) GenerateServerConfig(host *Host, clusterToken string, isInit bool,
 	k.applyEtcdSnapshotConfig(config)
 	k.applySecretsEncryptConfig(config)
 	k.applyTokenConfig(config)
+	k.applyNetworkConfig(config)
+	k.applyDisableConfig(config)
+	k.applyTLSConfig(config)
+	k.applyKubeconfigConfig(config)
+	k.applyDatastoreConfig(config)
+	k.applyServerConfig(config)
+	k.applySecurityConfig(config)
+	k.applyComponentArgs(config, true)
+	k.applyRuntimeConfig(config)
 
 	for _, arg := range k.ExtraArgs {
 		parts := strings.SplitN(arg, "=", 2)
@@ -279,6 +393,203 @@ func (k *K3s) applyTokenConfig(config dig.Mapping) {
 	}
 }
 
+func (k *K3s) applyNetworkConfig(config dig.Mapping) {
+	n := k.Network
+	if n == nil {
+		return
+	}
+	if len(n.ClusterCIDR) > 0 {
+		config["cluster-cidr"] = strings.Join(n.ClusterCIDR, ",")
+	}
+	if len(n.ServiceCIDR) > 0 {
+		config["service-cidr"] = strings.Join(n.ServiceCIDR, ",")
+	}
+	if len(n.ClusterDNS) > 0 {
+		config["cluster-dns"] = strings.Join(n.ClusterDNS, ",")
+	}
+	if n.ClusterDomain != "" {
+		config["cluster-domain"] = n.ClusterDomain
+	}
+	if n.NodePortRange != "" {
+		config["service-node-port-range"] = n.NodePortRange
+	}
+	if n.FlannelBackend != "" {
+		config["flannel-backend"] = n.FlannelBackend
+	}
+	if n.FlannelIPv6Masq {
+		config["flannel-ipv6-masq"] = true
+	}
+	if n.FlannelExternalIP {
+		config["flannel-external-ip"] = true
+	}
+	if n.EgressSelectorMode != "" {
+		config["egress-selector-mode"] = n.EgressSelectorMode
+	}
+	if n.ServiceLBNamespace != "" {
+		config["servicelb-namespace"] = n.ServiceLBNamespace
+	}
+}
+
+func (k *K3s) applyDisableConfig(config dig.Mapping) {
+	d := k.Disable
+	if d == nil {
+		return
+	}
+	if len(d.Components) > 0 {
+		config["disable"] = d.Components
+	}
+	if d.Scheduler {
+		config["disable-scheduler"] = true
+	}
+	if d.CloudController {
+		config["disable-cloud-controller"] = true
+	}
+	if d.KubeProxy {
+		config["disable-kube-proxy"] = true
+	}
+	if d.NetworkPolicy {
+		config["disable-network-policy"] = true
+	}
+	if d.HelmController {
+		config["disable-helm-controller"] = true
+	}
+}
+
+func (k *K3s) applyTLSConfig(config dig.Mapping) {
+	t := k.TLS
+	if t == nil {
+		return
+	}
+	if len(t.SANs) > 0 {
+		config["tls-san"] = t.SANs
+	}
+	if t.SANSecurity {
+		config["tls-san-security"] = true
+	}
+}
+
+func (k *K3s) applyKubeconfigConfig(config dig.Mapping) {
+	kc := k.Kubeconfig
+	if kc == nil {
+		return
+	}
+	if kc.Mode != "" {
+		config["write-kubeconfig-mode"] = kc.Mode
+	}
+	if kc.Group != "" {
+		config["write-kubeconfig-group"] = kc.Group
+	}
+	if kc.Name != "" {
+		config["write-kubeconfig-name"] = kc.Name
+	}
+}
+
+func (k *K3s) applyDatastoreConfig(config dig.Mapping) {
+	ds := k.Datastore
+	if ds == nil {
+		return
+	}
+	if ds.Endpoint != "" {
+		config["datastore-endpoint"] = ds.Endpoint
+	}
+	if ds.CAFile != "" {
+		config["datastore-cafile"] = ds.CAFile
+	}
+	if ds.CertFile != "" {
+		config["datastore-certfile"] = ds.CertFile
+	}
+	if ds.KeyFile != "" {
+		config["datastore-keyfile"] = ds.KeyFile
+	}
+}
+
+func (k *K3s) applyServerConfig(config dig.Mapping) {
+	s := k.Server
+	if s == nil {
+		return
+	}
+	if s.AdvertiseAddress != "" {
+		config["advertise-address"] = s.AdvertiseAddress
+	}
+	if s.AdvertisePort > 0 {
+		config["advertise-port"] = s.AdvertisePort
+	}
+	if s.BindAddress != "" {
+		config["bind-address"] = s.BindAddress
+	}
+	if s.HTTPSPort > 0 {
+		config["https-listen-port"] = s.HTTPSPort
+	}
+}
+
+func (k *K3s) applySecurityConfig(config dig.Mapping) {
+	sec := k.Security
+	if sec == nil {
+		return
+	}
+	if sec.SELinux {
+		config["selinux"] = true
+	}
+	if sec.ProtectKernelDefaults {
+		config["protect-kernel-defaults"] = true
+	}
+	if sec.EncryptionProvider != "" {
+		config["secrets-encryption-provider"] = sec.EncryptionProvider
+	}
+}
+
+func (k *K3s) applyComponentArgs(config dig.Mapping, isServer bool) {
+	ca := k.ComponentArgs
+	if ca == nil {
+		return
+	}
+	if isServer {
+		if len(ca.KubeAPIServer) > 0 {
+			config["kube-apiserver-arg"] = ca.KubeAPIServer
+		}
+		if len(ca.KubeControllerManager) > 0 {
+			config["kube-controller-manager-arg"] = ca.KubeControllerManager
+		}
+		if len(ca.KubeScheduler) > 0 {
+			config["kube-scheduler-arg"] = ca.KubeScheduler
+		}
+		if len(ca.KubeCloudControllerManager) > 0 {
+			config["kube-cloud-controller-manager-arg"] = ca.KubeCloudControllerManager
+		}
+		if len(ca.Etcd) > 0 {
+			config["etcd-arg"] = ca.Etcd
+		}
+		if len(ca.HelmController) > 0 {
+			config["helm-controller-arg"] = ca.HelmController
+		}
+	}
+	if len(ca.Kubelet) > 0 {
+		config["kubelet-arg"] = ca.Kubelet
+	}
+	if len(ca.KubeProxy) > 0 {
+		config["kube-proxy-arg"] = ca.KubeProxy
+	}
+}
+
+func (k *K3s) applyRuntimeConfig(config dig.Mapping) {
+	rt := k.Runtime
+	if rt == nil {
+		return
+	}
+	if rt.SystemDefaultRegistry != "" {
+		config["system-default-registry"] = rt.SystemDefaultRegistry
+	}
+	if rt.PauseImage != "" {
+		config["pause-image"] = rt.PauseImage
+	}
+	if rt.Snapshotter != "" {
+		config["snapshotter"] = rt.Snapshotter
+	}
+	if rt.DefaultRuntime != "" {
+		config["default-runtime"] = rt.DefaultRuntime
+	}
+}
+
 func (k *K3s) GenerateAgentConfig(host *Host, serverAddr, clusterToken string) ([]byte, error) {
 	config := make(dig.Mapping)
 
@@ -306,6 +617,9 @@ func (k *K3s) GenerateAgentConfig(host *Host, serverAddr, clusterToken string) (
 	}
 
 	applyNodeLabelsAndTaints(config, host)
+	k.applySecurityConfig(config)
+	k.applyComponentArgs(config, false)
+	k.applyRuntimeConfig(config)
 
 	return yaml.Marshal(config)
 }
