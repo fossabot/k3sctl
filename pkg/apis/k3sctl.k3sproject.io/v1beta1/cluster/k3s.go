@@ -31,16 +31,29 @@ type EtcdPruneConfig struct {
 }
 
 type EtcdS3Config struct {
-	Enabled       bool   `yaml:"enabled,omitempty"`
-	Endpoint      string `yaml:"endpoint,omitempty"`
-	EndpointCA    string `yaml:"endpointCa,omitempty"`
-	SkipSSLVerify bool   `yaml:"skipSslVerify,omitempty"`
-	AccessKey     string `yaml:"accessKey,omitempty"`
-	SecretKey     string `yaml:"secretKey,omitempty"`
-	Bucket        string `yaml:"bucket,omitempty"`
-	Region        string `yaml:"region,omitempty"`
-	Folder        string `yaml:"folder,omitempty"`
-	Insecure      bool   `yaml:"insecure,omitempty"`
+	Enabled          bool   `yaml:"enabled,omitempty"`
+	Endpoint         string `yaml:"endpoint,omitempty"`
+	EndpointCA       string `yaml:"endpointCa,omitempty"`
+	SkipSSLVerify    bool   `yaml:"skipSslVerify,omitempty"`
+	AccessKey        string `yaml:"accessKey,omitempty"`
+	SecretKey        string `yaml:"secretKey,omitempty"`
+	Bucket           string `yaml:"bucket,omitempty"`
+	Region           string `yaml:"region,omitempty"`
+	Folder           string `yaml:"folder,omitempty"`
+	Insecure         bool   `yaml:"insecure,omitempty"`
+	SessionToken     string `yaml:"sessionToken,omitempty"`
+	BucketLookupType string `yaml:"bucketLookupType,omitempty"`
+	Proxy            string `yaml:"proxy,omitempty"`
+	ConfigSecret     string `yaml:"configSecret,omitempty"`
+	Timeout          string `yaml:"timeout,omitempty"`
+	Retention        int    `yaml:"retention,omitempty"`
+}
+
+type EtcdAdvancedConfig struct {
+	ExposeMetrics             bool   `yaml:"exposeMetrics,omitempty"`
+	DisableSnapshots          bool   `yaml:"disableSnapshots,omitempty"`
+	SnapshotName              string `yaml:"snapshotName,omitempty"`
+	SnapshotReconcileInterval string `yaml:"snapshotReconcileInterval,omitempty"`
 }
 
 type SecretsEncryptConfig struct {
@@ -115,6 +128,9 @@ type NetworkConfig struct {
 	FlannelBackend     string   `yaml:"flannelBackend,omitempty"`
 	FlannelIPv6Masq    bool     `yaml:"flannelIPv6Masq,omitempty"`
 	FlannelExternalIP  bool     `yaml:"flannelExternalIP,omitempty"`
+	FlannelIface       string   `yaml:"flannelIface,omitempty"`
+	FlannelConf        string   `yaml:"flannelConf,omitempty"`
+	FlannelCNIConf     string   `yaml:"flannelCNIConf,omitempty"`
 	EgressSelectorMode string   `yaml:"egressSelectorMode,omitempty"`
 	ServiceLBNamespace string   `yaml:"serviceLBNamespace,omitempty"`
 }
@@ -175,30 +191,48 @@ type RuntimeConfig struct {
 	PauseImage            string `yaml:"pauseImage,omitempty"`
 	Snapshotter           string `yaml:"snapshotter,omitempty"`
 	DefaultRuntime        string `yaml:"defaultRuntime,omitempty"`
+	ResolvConf            string `yaml:"resolvConf,omitempty"`
+}
+
+type EmbeddedRegistryConfig struct {
+	Enabled bool `yaml:"enabled,omitempty"`
+}
+
+type ImageCredentialProviderConfig struct {
+	BinDir string `yaml:"binDir,omitempty"`
+	Config string `yaml:"config,omitempty"`
+}
+
+type LocalStorageConfig struct {
+	Path string `yaml:"path,omitempty"`
 }
 
 type K3s struct {
-	Version        string                `yaml:"version,omitempty"`
-	Config         dig.Mapping           `yaml:"config,omitempty"`
-	ExtraArgs      Flags                 `yaml:"extraArgs,omitempty"`
-	EtcdSnapshots  *EtcdSnapshotConfig   `yaml:"etcdSnapshots,omitempty"`
-	SecretsEncrypt *SecretsEncryptConfig `yaml:"secretsEncrypt,omitempty"`
-	CertRotate     *CertRotateConfig     `yaml:"certRotate,omitempty"`
-	Token          *TokenConfig          `yaml:"token,omitempty"`
-	Preflight      *PreflightConfig      `yaml:"preflight,omitempty"`
-	Airgap         *AirgapConfig         `yaml:"airgap,omitempty"`
-	Registries     *RegistriesConfig     `yaml:"registries,omitempty"`
-	HealthCheck    *HealthCheckConfig    `yaml:"healthCheck,omitempty"`
-	Network        *NetworkConfig        `yaml:"network,omitempty"`
-	Disable        *DisableConfig        `yaml:"disable,omitempty"`
-	TLS            *TLSConfig            `yaml:"tls,omitempty"`
-	Kubeconfig     *KubeconfigConfig     `yaml:"kubeconfig,omitempty"`
-	Datastore      *DatastoreConfig      `yaml:"datastore,omitempty"`
-	Server         *ServerConfig         `yaml:"server,omitempty"`
-	Security       *SecurityConfig       `yaml:"security,omitempty"`
-	ComponentArgs  *ComponentArgsConfig  `yaml:"componentArgs,omitempty"`
-	Runtime        *RuntimeConfig        `yaml:"runtime,omitempty"`
-	VersionString  string                `yaml:"-"`
+	Version                 string                         `yaml:"version,omitempty"`
+	Config                  dig.Mapping                    `yaml:"config,omitempty"`
+	ExtraArgs               Flags                          `yaml:"extraArgs,omitempty"`
+	EtcdSnapshots           *EtcdSnapshotConfig            `yaml:"etcdSnapshots,omitempty"`
+	SecretsEncrypt          *SecretsEncryptConfig          `yaml:"secretsEncrypt,omitempty"`
+	CertRotate              *CertRotateConfig              `yaml:"certRotate,omitempty"`
+	Token                   *TokenConfig                   `yaml:"token,omitempty"`
+	Preflight               *PreflightConfig               `yaml:"preflight,omitempty"`
+	Airgap                  *AirgapConfig                  `yaml:"airgap,omitempty"`
+	Registries              *RegistriesConfig              `yaml:"registries,omitempty"`
+	HealthCheck             *HealthCheckConfig             `yaml:"healthCheck,omitempty"`
+	Network                 *NetworkConfig                 `yaml:"network,omitempty"`
+	Disable                 *DisableConfig                 `yaml:"disable,omitempty"`
+	TLS                     *TLSConfig                     `yaml:"tls,omitempty"`
+	Kubeconfig              *KubeconfigConfig              `yaml:"kubeconfig,omitempty"`
+	Datastore               *DatastoreConfig               `yaml:"datastore,omitempty"`
+	Server                  *ServerConfig                  `yaml:"server,omitempty"`
+	Security                *SecurityConfig                `yaml:"security,omitempty"`
+	ComponentArgs           *ComponentArgsConfig           `yaml:"componentArgs,omitempty"`
+	Runtime                 *RuntimeConfig                 `yaml:"runtime,omitempty"`
+	EtcdAdvanced            *EtcdAdvancedConfig            `yaml:"etcdAdvanced,omitempty"`
+	EmbeddedRegistry        *EmbeddedRegistryConfig        `yaml:"embeddedRegistry,omitempty"`
+	ImageCredentialProvider *ImageCredentialProviderConfig `yaml:"imageCredentialProvider,omitempty"`
+	LocalStorage            *LocalStorageConfig            `yaml:"localStorage,omitempty"`
+	VersionString           string                         `yaml:"-"`
 }
 
 func (k *K3s) SetDefaults() {
@@ -265,6 +299,25 @@ func (k *K3s) Validate() error {
 			return fmt.Errorf("security.encryptionProvider: invalid value %q (valid: aescbc, secretbox)", sec.EncryptionProvider)
 		}
 	}
+	if n := k.Network; n != nil {
+		if n.FlannelBackend == "none" && (n.FlannelIface != "" || n.FlannelConf != "" || n.FlannelCNIConf != "") {
+			return fmt.Errorf("network: flannel interface/conf options are not valid when flannelBackend is \"none\"")
+		}
+	}
+	if es := k.EtcdSnapshots; es != nil && es.S3 != nil {
+		validLookupTypes := map[string]bool{"auto": true, "dns": true, "path": true}
+		if es.S3.BucketLookupType != "" && !validLookupTypes[es.S3.BucketLookupType] {
+			return fmt.Errorf("etcdSnapshots.s3.bucketLookupType: invalid value %q (valid: auto, dns, path)", es.S3.BucketLookupType)
+		}
+		if es.S3.SessionToken != "" && !es.S3.Enabled {
+			return fmt.Errorf("etcdSnapshots.s3.sessionToken requires s3.enabled to be true")
+		}
+	}
+	if icp := k.ImageCredentialProvider; icp != nil {
+		if (icp.BinDir != "" && icp.Config == "") || (icp.BinDir == "" && icp.Config != "") {
+			return fmt.Errorf("imageCredentialProvider: both binDir and config must be set together")
+		}
+	}
 	return nil
 }
 
@@ -306,6 +359,11 @@ func (k *K3s) GenerateServerConfig(host *Host, clusterToken string, isInit bool,
 	k.applySecurityConfig(config)
 	k.applyComponentArgs(config, true)
 	k.applyRuntimeConfig(config)
+	k.applyEtcdAdvancedConfig(config)
+	k.applyEmbeddedRegistryConfig(config)
+	k.applyImageCredentialProviderConfig(config)
+	k.applyLocalStorageConfig(config)
+	applyNodeNetworking(config, host)
 
 	for _, arg := range k.ExtraArgs {
 		parts := strings.SplitN(arg, "=", 2)
@@ -372,6 +430,24 @@ func (k *K3s) applyEtcdSnapshotConfig(config dig.Mapping) {
 	if s3.Insecure {
 		config["etcd-s3-insecure"] = true
 	}
+	if s3.SessionToken != "" {
+		config["etcd-s3-session-token"] = s3.SessionToken
+	}
+	if s3.BucketLookupType != "" {
+		config["etcd-s3-bucket-lookup-type"] = s3.BucketLookupType
+	}
+	if s3.Proxy != "" {
+		config["etcd-s3-proxy"] = s3.Proxy
+	}
+	if s3.ConfigSecret != "" {
+		config["etcd-s3-config-secret"] = s3.ConfigSecret
+	}
+	if s3.Timeout != "" {
+		config["etcd-s3-timeout"] = s3.Timeout
+	}
+	if s3.Retention > 0 {
+		config["etcd-s3-retention"] = s3.Retention
+	}
 }
 
 func (k *K3s) applySecretsEncryptConfig(config dig.Mapping) {
@@ -421,6 +497,15 @@ func (k *K3s) applyNetworkConfig(config dig.Mapping) {
 	}
 	if n.FlannelExternalIP {
 		config["flannel-external-ip"] = true
+	}
+	if n.FlannelIface != "" {
+		config["flannel-iface"] = n.FlannelIface
+	}
+	if n.FlannelConf != "" {
+		config["flannel-conf"] = n.FlannelConf
+	}
+	if n.FlannelCNIConf != "" {
+		config["flannel-cni-conf"] = n.FlannelCNIConf
 	}
 	if n.EgressSelectorMode != "" {
 		config["egress-selector-mode"] = n.EgressSelectorMode
@@ -588,6 +673,73 @@ func (k *K3s) applyRuntimeConfig(config dig.Mapping) {
 	if rt.DefaultRuntime != "" {
 		config["default-runtime"] = rt.DefaultRuntime
 	}
+	if rt.ResolvConf != "" {
+		config["resolv-conf"] = rt.ResolvConf
+	}
+}
+
+func (k *K3s) applyEtcdAdvancedConfig(config dig.Mapping) {
+	ea := k.EtcdAdvanced
+	if ea == nil {
+		return
+	}
+	if ea.ExposeMetrics {
+		config["etcd-expose-metrics"] = true
+	}
+	if ea.DisableSnapshots {
+		config["etcd-disable-snapshots"] = true
+	}
+	if ea.SnapshotName != "" {
+		config["etcd-snapshot-name"] = ea.SnapshotName
+	}
+	if ea.SnapshotReconcileInterval != "" {
+		config["etcd-snapshot-reconcile-interval"] = ea.SnapshotReconcileInterval
+	}
+}
+
+func (k *K3s) applyEmbeddedRegistryConfig(config dig.Mapping) {
+	er := k.EmbeddedRegistry
+	if er == nil {
+		return
+	}
+	if er.Enabled {
+		config["embedded-registry"] = true
+	}
+}
+
+func (k *K3s) applyImageCredentialProviderConfig(config dig.Mapping) {
+	icp := k.ImageCredentialProvider
+	if icp == nil {
+		return
+	}
+	if icp.BinDir != "" {
+		config["image-credential-provider-bin-dir"] = icp.BinDir
+	}
+	if icp.Config != "" {
+		config["image-credential-provider-config"] = icp.Config
+	}
+}
+
+func (k *K3s) applyLocalStorageConfig(config dig.Mapping) {
+	ls := k.LocalStorage
+	if ls == nil {
+		return
+	}
+	if ls.Path != "" {
+		config["default-local-storage-path"] = ls.Path
+	}
+}
+
+func applyNodeNetworking(config dig.Mapping, host *Host) {
+	if len(host.NodeExternalIP) > 0 {
+		config["node-external-ip"] = strings.Join(host.NodeExternalIP, ",")
+	}
+	if len(host.NodeInternalDNS) > 0 {
+		config["node-internal-dns"] = strings.Join(host.NodeInternalDNS, ",")
+	}
+	if len(host.NodeExternalDNS) > 0 {
+		config["node-external-dns"] = strings.Join(host.NodeExternalDNS, ",")
+	}
 }
 
 func (k *K3s) GenerateAgentConfig(host *Host, serverAddr, clusterToken string) ([]byte, error) {
@@ -620,6 +772,8 @@ func (k *K3s) GenerateAgentConfig(host *Host, serverAddr, clusterToken string) (
 	k.applySecurityConfig(config)
 	k.applyComponentArgs(config, false)
 	k.applyRuntimeConfig(config)
+	k.applyImageCredentialProviderConfig(config)
+	applyNodeNetworking(config, host)
 
 	return yaml.Marshal(config)
 }

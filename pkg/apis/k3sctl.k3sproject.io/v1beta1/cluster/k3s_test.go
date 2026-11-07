@@ -1305,3 +1305,387 @@ runtime:
 	assert.Equal(t, "stargz", k.Runtime.Snapshotter)
 	assert.Equal(t, "nvidia", k.Runtime.DefaultRuntime)
 }
+
+func TestGenerateServerConfig_EmbeddedRegistry(t *testing.T) {
+	k := &K3s{
+		EmbeddedRegistry: &EmbeddedRegistryConfig{Enabled: true},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, true, config["embedded-registry"])
+}
+
+func TestGenerateServerConfig_EmbeddedRegistry_Disabled(t *testing.T) {
+	k := &K3s{
+		EmbeddedRegistry: &EmbeddedRegistryConfig{Enabled: false},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	_, has := config["embedded-registry"]
+	assert.False(t, has)
+}
+
+func TestGenerateServerConfig_ImageCredentialProvider(t *testing.T) {
+	k := &K3s{
+		ImageCredentialProvider: &ImageCredentialProviderConfig{
+			BinDir: "/usr/local/bin/ecr-credential-provider",
+			Config: "/etc/rancher/k3s/credential-provider.yaml",
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, "/usr/local/bin/ecr-credential-provider", config["image-credential-provider-bin-dir"])
+	assert.Equal(t, "/etc/rancher/k3s/credential-provider.yaml", config["image-credential-provider-config"])
+}
+
+func TestGenerateAgentConfig_ImageCredentialProvider(t *testing.T) {
+	k := &K3s{
+		ImageCredentialProvider: &ImageCredentialProviderConfig{
+			BinDir: "/usr/local/bin/ecr-credential-provider",
+			Config: "/etc/rancher/k3s/credential-provider.yaml",
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleAgent}
+
+	data, err := k.GenerateAgentConfig(host, "10.0.0.1", "token")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, "/usr/local/bin/ecr-credential-provider", config["image-credential-provider-bin-dir"])
+	assert.Equal(t, "/etc/rancher/k3s/credential-provider.yaml", config["image-credential-provider-config"])
+}
+
+func TestGenerateServerConfig_LocalStorage(t *testing.T) {
+	k := &K3s{
+		LocalStorage: &LocalStorageConfig{Path: "/data/local-storage"},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, "/data/local-storage", config["default-local-storage-path"])
+}
+
+func TestGenerateServerConfig_NodeNetworking(t *testing.T) {
+	k := &K3s{}
+	k.SetDefaults()
+	host := &Host{
+		Role:            RoleServer,
+		NodeExternalIP:  []string{"203.0.113.10", "2001:db8::1"},
+		NodeInternalDNS: []string{"server1.internal"},
+		NodeExternalDNS: []string{"server1.example.com"},
+	}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, "203.0.113.10,2001:db8::1", config["node-external-ip"])
+	assert.Equal(t, "server1.internal", config["node-internal-dns"])
+	assert.Equal(t, "server1.example.com", config["node-external-dns"])
+}
+
+func TestGenerateAgentConfig_NodeNetworking(t *testing.T) {
+	k := &K3s{}
+	k.SetDefaults()
+	host := &Host{
+		Role:            RoleAgent,
+		NodeExternalIP:  []string{"203.0.113.20"},
+		NodeExternalDNS: []string{"agent1.example.com"},
+	}
+
+	data, err := k.GenerateAgentConfig(host, "10.0.0.1", "token")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, "203.0.113.20", config["node-external-ip"])
+	assert.Equal(t, "agent1.example.com", config["node-external-dns"])
+	_, has := config["node-internal-dns"]
+	assert.False(t, has)
+}
+
+func TestGenerateServerConfig_EtcdAdvanced(t *testing.T) {
+	k := &K3s{
+		EtcdAdvanced: &EtcdAdvancedConfig{
+			ExposeMetrics:             true,
+			DisableSnapshots:          true,
+			SnapshotName:              "custom-snap",
+			SnapshotReconcileInterval: "10m",
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, true, config["etcd-expose-metrics"])
+	assert.Equal(t, true, config["etcd-disable-snapshots"])
+	assert.Equal(t, "custom-snap", config["etcd-snapshot-name"])
+	assert.Equal(t, "10m", config["etcd-snapshot-reconcile-interval"])
+}
+
+func TestGenerateServerConfig_EtcdS3Advanced(t *testing.T) {
+	k := &K3s{
+		EtcdSnapshots: &EtcdSnapshotConfig{
+			Scheduled: true,
+			S3: &EtcdS3Config{
+				Enabled:          true,
+				Bucket:           "my-bucket",
+				SessionToken:     "AQoDYXdzEJr...",
+				BucketLookupType: "path",
+				Proxy:            "http://proxy:8080",
+				ConfigSecret:     "etcd-s3-secret",
+				Timeout:          "30s",
+				Retention:        5,
+			},
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, true, config["etcd-s3"])
+	assert.Equal(t, "my-bucket", config["etcd-s3-bucket"])
+	assert.Equal(t, "AQoDYXdzEJr...", config["etcd-s3-session-token"])
+	assert.Equal(t, "path", config["etcd-s3-bucket-lookup-type"])
+	assert.Equal(t, "http://proxy:8080", config["etcd-s3-proxy"])
+	assert.Equal(t, "etcd-s3-secret", config["etcd-s3-config-secret"])
+	assert.Equal(t, "30s", config["etcd-s3-timeout"])
+	assert.Equal(t, 5, config["etcd-s3-retention"])
+}
+
+func TestGenerateServerConfig_FlannelAdvanced(t *testing.T) {
+	k := &K3s{
+		Network: &NetworkConfig{
+			FlannelBackend: "vxlan",
+			FlannelIface:   "eth1",
+			FlannelConf:    "/etc/flannel/custom.json",
+			FlannelCNIConf: "/etc/cni/net.d/custom.conflist",
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, "vxlan", config["flannel-backend"])
+	assert.Equal(t, "eth1", config["flannel-iface"])
+	assert.Equal(t, "/etc/flannel/custom.json", config["flannel-conf"])
+	assert.Equal(t, "/etc/cni/net.d/custom.conflist", config["flannel-cni-conf"])
+}
+
+func TestGenerateServerConfig_RuntimeResolvConf(t *testing.T) {
+	k := &K3s{
+		Runtime: &RuntimeConfig{
+			ResolvConf: "/etc/custom-resolv.conf",
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, "/etc/custom-resolv.conf", config["resolv-conf"])
+}
+
+func TestK3sValidate_FlannelNoneWithIface(t *testing.T) {
+	k := K3s{Network: &NetworkConfig{
+		FlannelBackend: "none",
+		FlannelIface:   "eth1",
+	}}
+	err := k.Validate()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "flannel interface/conf options are not valid")
+}
+
+func TestK3sValidate_FlannelNoneWithConf(t *testing.T) {
+	k := K3s{Network: &NetworkConfig{
+		FlannelBackend: "none",
+		FlannelConf:    "/etc/flannel.json",
+	}}
+	assert.Error(t, k.Validate())
+}
+
+func TestK3sValidate_FlannelIfaceWithBackend(t *testing.T) {
+	k := K3s{Network: &NetworkConfig{
+		FlannelBackend: "vxlan",
+		FlannelIface:   "eth1",
+	}}
+	assert.NoError(t, k.Validate())
+}
+
+func TestK3sValidate_S3BucketLookupType(t *testing.T) {
+	t.Run("valid type path", func(t *testing.T) {
+		k := K3s{EtcdSnapshots: &EtcdSnapshotConfig{S3: &EtcdS3Config{
+			Enabled:          true,
+			Bucket:           "b",
+			BucketLookupType: "path",
+		}}}
+		assert.NoError(t, k.Validate())
+	})
+	t.Run("invalid type", func(t *testing.T) {
+		k := K3s{EtcdSnapshots: &EtcdSnapshotConfig{S3: &EtcdS3Config{
+			Enabled:          true,
+			Bucket:           "b",
+			BucketLookupType: "invalid",
+		}}}
+		err := k.Validate()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "bucketLookupType")
+	})
+}
+
+func TestK3sValidate_S3SessionTokenRequiresEnabled(t *testing.T) {
+	k := K3s{EtcdSnapshots: &EtcdSnapshotConfig{S3: &EtcdS3Config{
+		Enabled:      false,
+		SessionToken: "token",
+	}}}
+	err := k.Validate()
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "sessionToken requires s3.enabled")
+}
+
+func TestK3sValidate_ImageCredentialProviderPartial(t *testing.T) {
+	t.Run("binDir without config", func(t *testing.T) {
+		k := K3s{ImageCredentialProvider: &ImageCredentialProviderConfig{
+			BinDir: "/usr/local/bin",
+		}}
+		err := k.Validate()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "both binDir and config must be set together")
+	})
+	t.Run("config without binDir", func(t *testing.T) {
+		k := K3s{ImageCredentialProvider: &ImageCredentialProviderConfig{
+			Config: "/etc/cred.yaml",
+		}}
+		assert.Error(t, k.Validate())
+	})
+	t.Run("both set is valid", func(t *testing.T) {
+		k := K3s{ImageCredentialProvider: &ImageCredentialProviderConfig{
+			BinDir: "/usr/local/bin",
+			Config: "/etc/cred.yaml",
+		}}
+		assert.NoError(t, k.Validate())
+	})
+}
+
+func TestK3sYAMLRoundTrip_NewFeaturesV2(t *testing.T) {
+	input := `
+version: v1.31.0+k3s1
+embeddedRegistry:
+  enabled: true
+imageCredentialProvider:
+  binDir: /usr/local/bin/ecr-cred
+  config: /etc/rancher/k3s/cred-provider.yaml
+localStorage:
+  path: /data/local-storage
+etcdAdvanced:
+  exposeMetrics: true
+  disableSnapshots: false
+  snapshotName: my-snap
+  snapshotReconcileInterval: 5m
+network:
+  flannelBackend: vxlan
+  flannelIface: eth1
+  flannelConf: /etc/flannel.json
+  flannelCNIConf: /etc/cni/custom.conflist
+runtime:
+  resolvConf: /etc/custom-resolv.conf
+etcdSnapshots:
+  scheduled: true
+  s3:
+    enabled: true
+    bucket: my-bucket
+    sessionToken: tok123
+    bucketLookupType: dns
+    proxy: http://proxy:8080
+    configSecret: s3-secret
+    timeout: 30s
+    retention: 5
+`
+	var k K3s
+	require.NoError(t, yaml.Unmarshal([]byte(input), &k))
+
+	require.NotNil(t, k.EmbeddedRegistry)
+	assert.True(t, k.EmbeddedRegistry.Enabled)
+
+	require.NotNil(t, k.ImageCredentialProvider)
+	assert.Equal(t, "/usr/local/bin/ecr-cred", k.ImageCredentialProvider.BinDir)
+	assert.Equal(t, "/etc/rancher/k3s/cred-provider.yaml", k.ImageCredentialProvider.Config)
+
+	require.NotNil(t, k.LocalStorage)
+	assert.Equal(t, "/data/local-storage", k.LocalStorage.Path)
+
+	require.NotNil(t, k.EtcdAdvanced)
+	assert.True(t, k.EtcdAdvanced.ExposeMetrics)
+	assert.False(t, k.EtcdAdvanced.DisableSnapshots)
+	assert.Equal(t, "my-snap", k.EtcdAdvanced.SnapshotName)
+	assert.Equal(t, "5m", k.EtcdAdvanced.SnapshotReconcileInterval)
+
+	require.NotNil(t, k.Network)
+	assert.Equal(t, "eth1", k.Network.FlannelIface)
+	assert.Equal(t, "/etc/flannel.json", k.Network.FlannelConf)
+	assert.Equal(t, "/etc/cni/custom.conflist", k.Network.FlannelCNIConf)
+
+	require.NotNil(t, k.Runtime)
+	assert.Equal(t, "/etc/custom-resolv.conf", k.Runtime.ResolvConf)
+
+	require.NotNil(t, k.EtcdSnapshots)
+	require.NotNil(t, k.EtcdSnapshots.S3)
+	assert.Equal(t, "tok123", k.EtcdSnapshots.S3.SessionToken)
+	assert.Equal(t, "dns", k.EtcdSnapshots.S3.BucketLookupType)
+	assert.Equal(t, "http://proxy:8080", k.EtcdSnapshots.S3.Proxy)
+	assert.Equal(t, "s3-secret", k.EtcdSnapshots.S3.ConfigSecret)
+	assert.Equal(t, "30s", k.EtcdSnapshots.S3.Timeout)
+	assert.Equal(t, 5, k.EtcdSnapshots.S3.Retention)
+}
