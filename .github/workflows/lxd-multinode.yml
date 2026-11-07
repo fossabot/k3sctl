@@ -2,6 +2,7 @@ name: LXD Multi-Node K3s
 
 # K3s cluster tests using LXD system containers:
 #   - Single-server: 1 server + 2 agents (TestLXDMultiNodeK3s)
+#   - Extended flags: 1 server + 1 agent with all K3s flags (TestLXDExtendedFlags)
 #   - HA multi-server: 3 servers + 2 agents (TestLXDHAMultiServer)
 #   - No KVM required - containers share the host kernel
 #   - Containers share LXD's default bridge (lxdbr0) for inter-node traffic
@@ -18,6 +19,12 @@ name: LXD Multi-Node K3s
 #   K3SCTL_BINARY="$PWD/k3sctl" \
 #     go test -tags=integration -timeout 45m -v ./integration/lxd/ \
 #     -run TestLXDMultiNodeK3s
+#
+#   # Extended flags test (1 server + 1 agent):
+#   K3SCTL_LXD_INTEGRATION=1 \
+#   K3SCTL_BINARY="$PWD/k3sctl" \
+#     go test -tags=integration -timeout 45m -v ./integration/lxd/ \
+#     -run TestLXDExtendedFlags
 #
 #   # HA test (3 servers + 2 agents):
 #   K3SCTL_LXD_INTEGRATION=1 \
@@ -127,6 +134,20 @@ jobs:
             -- -tags=integration -timeout 30m -v ./integration/lxd/ \
             -run TestLXDMultiNodeK3s
 
+      - name: Extended flags integration test (1S + 1A)
+        env:
+          K3SCTL_BINARY: ${{ github.workspace }}/k3sctl
+          K3SCTL_ARTIFACT_DIR: ${{ github.workspace }}/integration-artifacts/${{ env.K3SCTL_LXD_RUN_ID }}-flags
+          SSH_KNOWN_HOSTS: /dev/null
+        run: |
+          set -euo pipefail
+          mkdir -p test-results
+          "$(go env GOPATH)/bin/gotestsum" \
+            --junitfile test-results/integration-flags.xml \
+            --format testname \
+            -- -tags=integration -timeout 30m -v ./integration/lxd/ \
+            -run TestLXDExtendedFlags
+
       - name: HA multi-server integration test (3S + 2A)
         env:
           K3SCTL_BINARY: ${{ github.workspace }}/k3sctl
@@ -154,8 +175,8 @@ jobs:
 
       # The Go test cleans up after itself, but a cancelled job can kill the
       # process before its deferred cleanup runs. This step only ever touches
-      # resources belonging to this run. The HA test appends "-ha" to the run
-      # ID, so both "k3sctl-<id>-*" and "k3sctl-<id>-ha-*" are caught.
+      # resources belonging to this run. The flags test appends "-flags" and the
+      # HA test appends "-ha" to the run ID, so all variants are caught.
       - name: Fallback LXD cleanup
         if: always()
         run: |
@@ -174,7 +195,7 @@ jobs:
             esac
           done
 
-          for profile_suffix in "" "-ha"; do
+          for profile_suffix in "" "-flags" "-ha"; do
             profile="${prefix}${profile_suffix}"
             if lxc profile show "${profile}" >/dev/null 2>&1; then
               echo "Deleting profile ${profile}"
