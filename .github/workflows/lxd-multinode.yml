@@ -29,10 +29,15 @@ name: LXD Multi-Node K3s
 
 on:
   push:
-    branches:
-      - main
-      - ccr-385bb1e9-ed0ul0
-      - ccr-385bb1e9-ed0ul0-v2
+    branches: ["**"]
+    paths:
+      - ".github/workflows/lxd-multinode.yml"
+      - "integration/**"
+      - "phase/**"
+      - "go.mod"
+      - "go.sum"
+  pull_request:
+    branches: [main]
     paths:
       - ".github/workflows/lxd-multinode.yml"
       - "integration/**"
