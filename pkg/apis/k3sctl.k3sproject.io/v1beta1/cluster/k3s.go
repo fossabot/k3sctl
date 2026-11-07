@@ -68,9 +68,11 @@ type CertRotateConfig struct {
 }
 
 type TokenConfig struct {
-	AgentToken  string `yaml:"agentToken,omitempty"`
-	ServerToken string `yaml:"serverToken,omitempty"`
-	Rotate      bool   `yaml:"rotate,omitempty"`
+	AgentToken     string `yaml:"agentToken,omitempty"`
+	ServerToken    string `yaml:"serverToken,omitempty"`
+	TokenFile      string `yaml:"tokenFile,omitempty"`
+	AgentTokenFile string `yaml:"agentTokenFile,omitempty"`
+	Rotate         bool   `yaml:"rotate,omitempty"`
 }
 
 type PreflightConfig struct {
@@ -153,6 +155,7 @@ type KubeconfigConfig struct {
 	Mode  string `yaml:"mode,omitempty"`
 	Group string `yaml:"group,omitempty"`
 	Name  string `yaml:"name,omitempty"`
+	Path  string `yaml:"path,omitempty"`
 }
 
 type DatastoreConfig struct {
@@ -163,16 +166,20 @@ type DatastoreConfig struct {
 }
 
 type ServerConfig struct {
-	AdvertiseAddress string `yaml:"advertiseAddress,omitempty"`
-	AdvertisePort    int    `yaml:"advertisePort,omitempty"`
-	BindAddress      string `yaml:"bindAddress,omitempty"`
-	HTTPSPort        int    `yaml:"httpsPort,omitempty"`
+	AdvertiseAddress  string `yaml:"advertiseAddress,omitempty"`
+	AdvertisePort     int    `yaml:"advertisePort,omitempty"`
+	BindAddress       string `yaml:"bindAddress,omitempty"`
+	HTTPSPort         int    `yaml:"httpsPort,omitempty"`
+	SupervisorMetrics bool   `yaml:"supervisorMetrics,omitempty"`
+	EnablePprof       bool   `yaml:"enablePprof,omitempty"`
 }
 
 type SecurityConfig struct {
 	SELinux               bool   `yaml:"selinux,omitempty"`
 	ProtectKernelDefaults bool   `yaml:"protectKernelDefaults,omitempty"`
 	EncryptionProvider    string `yaml:"encryptionProvider,omitempty"`
+	Rootless              bool   `yaml:"rootless,omitempty"`
+	PreferBundledBin      bool   `yaml:"preferBundledBin,omitempty"`
 }
 
 type ComponentArgsConfig struct {
@@ -187,15 +194,18 @@ type ComponentArgsConfig struct {
 }
 
 type RuntimeConfig struct {
-	SystemDefaultRegistry string `yaml:"systemDefaultRegistry,omitempty"`
-	PauseImage            string `yaml:"pauseImage,omitempty"`
-	Snapshotter           string `yaml:"snapshotter,omitempty"`
-	DefaultRuntime        string `yaml:"defaultRuntime,omitempty"`
-	ResolvConf            string `yaml:"resolvConf,omitempty"`
+	SystemDefaultRegistry    string `yaml:"systemDefaultRegistry,omitempty"`
+	PauseImage               string `yaml:"pauseImage,omitempty"`
+	Snapshotter              string `yaml:"snapshotter,omitempty"`
+	DefaultRuntime           string `yaml:"defaultRuntime,omitempty"`
+	ResolvConf               string `yaml:"resolvConf,omitempty"`
+	ContainerRuntimeEndpoint string `yaml:"containerRuntimeEndpoint,omitempty"`
+	ImageServiceEndpoint     string `yaml:"imageServiceEndpoint,omitempty"`
 }
 
 type EmbeddedRegistryConfig struct {
-	Enabled bool `yaml:"enabled,omitempty"`
+	Enabled                        bool `yaml:"enabled,omitempty"`
+	DisableDefaultRegistryEndpoint bool `yaml:"disableDefaultRegistryEndpoint,omitempty"`
 }
 
 type ImageCredentialProviderConfig struct {
@@ -205,6 +215,10 @@ type ImageCredentialProviderConfig struct {
 
 type LocalStorageConfig struct {
 	Path string `yaml:"path,omitempty"`
+}
+
+type AgentConfig struct {
+	LBServerPort int `yaml:"lbServerPort,omitempty"`
 }
 
 type K3s struct {
@@ -232,6 +246,7 @@ type K3s struct {
 	EmbeddedRegistry        *EmbeddedRegistryConfig        `yaml:"embeddedRegistry,omitempty"`
 	ImageCredentialProvider *ImageCredentialProviderConfig `yaml:"imageCredentialProvider,omitempty"`
 	LocalStorage            *LocalStorageConfig            `yaml:"localStorage,omitempty"`
+	Agent                   *AgentConfig                   `yaml:"agent,omitempty"`
 	VersionString           string                         `yaml:"-"`
 }
 
@@ -316,6 +331,19 @@ func (k *K3s) Validate() error {
 	if icp := k.ImageCredentialProvider; icp != nil {
 		if (icp.BinDir != "" && icp.Config == "") || (icp.BinDir == "" && icp.Config != "") {
 			return fmt.Errorf("imageCredentialProvider: both binDir and config must be set together")
+		}
+	}
+	if tok := k.Token; tok != nil {
+		if tok.ServerToken != "" && tok.TokenFile != "" {
+			return fmt.Errorf("token: serverToken and tokenFile are mutually exclusive")
+		}
+		if tok.AgentToken != "" && tok.AgentTokenFile != "" {
+			return fmt.Errorf("token: agentToken and agentTokenFile are mutually exclusive")
+		}
+	}
+	if ag := k.Agent; ag != nil {
+		if ag.LBServerPort < 0 || ag.LBServerPort > 65535 {
+			return fmt.Errorf("agent.lbServerPort: must be between 0 and 65535")
 		}
 	}
 	return nil
@@ -467,6 +495,12 @@ func (k *K3s) applyTokenConfig(config dig.Mapping) {
 	if k.Token.ServerToken != "" {
 		config["token"] = k.Token.ServerToken
 	}
+	if k.Token.TokenFile != "" {
+		config["token-file"] = k.Token.TokenFile
+	}
+	if k.Token.AgentTokenFile != "" {
+		config["agent-token-file"] = k.Token.AgentTokenFile
+	}
 }
 
 func (k *K3s) applyNetworkConfig(config dig.Mapping) {
@@ -567,6 +601,9 @@ func (k *K3s) applyKubeconfigConfig(config dig.Mapping) {
 	if kc.Name != "" {
 		config["write-kubeconfig-name"] = kc.Name
 	}
+	if kc.Path != "" {
+		config["write-kubeconfig"] = kc.Path
+	}
 }
 
 func (k *K3s) applyDatastoreConfig(config dig.Mapping) {
@@ -605,6 +642,12 @@ func (k *K3s) applyServerConfig(config dig.Mapping) {
 	if s.HTTPSPort > 0 {
 		config["https-listen-port"] = s.HTTPSPort
 	}
+	if s.SupervisorMetrics {
+		config["supervisor-metrics"] = true
+	}
+	if s.EnablePprof {
+		config["enable-pprof"] = true
+	}
 }
 
 func (k *K3s) applySecurityConfig(config dig.Mapping) {
@@ -620,6 +663,12 @@ func (k *K3s) applySecurityConfig(config dig.Mapping) {
 	}
 	if sec.EncryptionProvider != "" {
 		config["secrets-encryption-provider"] = sec.EncryptionProvider
+	}
+	if sec.Rootless {
+		config["rootless"] = true
+	}
+	if sec.PreferBundledBin {
+		config["prefer-bundled-bin"] = true
 	}
 }
 
@@ -676,6 +725,12 @@ func (k *K3s) applyRuntimeConfig(config dig.Mapping) {
 	if rt.ResolvConf != "" {
 		config["resolv-conf"] = rt.ResolvConf
 	}
+	if rt.ContainerRuntimeEndpoint != "" {
+		config["container-runtime-endpoint"] = rt.ContainerRuntimeEndpoint
+	}
+	if rt.ImageServiceEndpoint != "" {
+		config["image-service-endpoint"] = rt.ImageServiceEndpoint
+	}
 }
 
 func (k *K3s) applyEtcdAdvancedConfig(config dig.Mapping) {
@@ -705,6 +760,9 @@ func (k *K3s) applyEmbeddedRegistryConfig(config dig.Mapping) {
 	if er.Enabled {
 		config["embedded-registry"] = true
 	}
+	if er.DisableDefaultRegistryEndpoint {
+		config["disable-default-registry-endpoint"] = true
+	}
 }
 
 func (k *K3s) applyImageCredentialProviderConfig(config dig.Mapping) {
@@ -730,6 +788,26 @@ func (k *K3s) applyLocalStorageConfig(config dig.Mapping) {
 	}
 }
 
+func (k *K3s) applyDisableDefaultRegistryEndpoint(config dig.Mapping) {
+	er := k.EmbeddedRegistry
+	if er == nil {
+		return
+	}
+	if er.DisableDefaultRegistryEndpoint {
+		config["disable-default-registry-endpoint"] = true
+	}
+}
+
+func (k *K3s) applyAgentConfig(config dig.Mapping) {
+	ag := k.Agent
+	if ag == nil {
+		return
+	}
+	if ag.LBServerPort > 0 {
+		config["lb-server-port"] = ag.LBServerPort
+	}
+}
+
 func applyNodeNetworking(config dig.Mapping, host *Host) {
 	if len(host.NodeExternalIP) > 0 {
 		config["node-external-ip"] = strings.Join(host.NodeExternalIP, ",")
@@ -739,6 +817,9 @@ func applyNodeNetworking(config dig.Mapping, host *Host) {
 	}
 	if len(host.NodeExternalDNS) > 0 {
 		config["node-external-dns"] = strings.Join(host.NodeExternalDNS, ",")
+	}
+	if host.WithNodeID {
+		config["with-node-id"] = true
 	}
 }
 
@@ -773,6 +854,8 @@ func (k *K3s) GenerateAgentConfig(host *Host, serverAddr, clusterToken string) (
 	k.applyComponentArgs(config, false)
 	k.applyRuntimeConfig(config)
 	k.applyImageCredentialProviderConfig(config)
+	k.applyAgentConfig(config)
+	k.applyDisableDefaultRegistryEndpoint(config)
 	applyNodeNetworking(config, host)
 
 	return yaml.Marshal(config)
