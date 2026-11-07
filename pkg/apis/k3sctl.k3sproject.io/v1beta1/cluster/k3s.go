@@ -208,24 +208,24 @@ type LocalStorageConfig struct {
 }
 
 type K3s struct {
-	Version        string                `yaml:"version,omitempty"`
-	Config         dig.Mapping           `yaml:"config,omitempty"`
-	ExtraArgs      Flags                 `yaml:"extraArgs,omitempty"`
-	EtcdSnapshots  *EtcdSnapshotConfig   `yaml:"etcdSnapshots,omitempty"`
-	SecretsEncrypt *SecretsEncryptConfig `yaml:"secretsEncrypt,omitempty"`
-	CertRotate     *CertRotateConfig     `yaml:"certRotate,omitempty"`
-	Token          *TokenConfig          `yaml:"token,omitempty"`
-	Preflight      *PreflightConfig      `yaml:"preflight,omitempty"`
-	Airgap         *AirgapConfig         `yaml:"airgap,omitempty"`
-	Registries     *RegistriesConfig     `yaml:"registries,omitempty"`
-	HealthCheck    *HealthCheckConfig    `yaml:"healthCheck,omitempty"`
-	Network        *NetworkConfig        `yaml:"network,omitempty"`
-	Disable        *DisableConfig        `yaml:"disable,omitempty"`
-	TLS            *TLSConfig            `yaml:"tls,omitempty"`
-	Kubeconfig     *KubeconfigConfig     `yaml:"kubeconfig,omitempty"`
-	Datastore      *DatastoreConfig      `yaml:"datastore,omitempty"`
-	Server         *ServerConfig         `yaml:"server,omitempty"`
-	Security       *SecurityConfig       `yaml:"security,omitempty"`
+	Version                 string                         `yaml:"version,omitempty"`
+	Config                  dig.Mapping                    `yaml:"config,omitempty"`
+	ExtraArgs               Flags                          `yaml:"extraArgs,omitempty"`
+	EtcdSnapshots           *EtcdSnapshotConfig            `yaml:"etcdSnapshots,omitempty"`
+	SecretsEncrypt          *SecretsEncryptConfig          `yaml:"secretsEncrypt,omitempty"`
+	CertRotate              *CertRotateConfig              `yaml:"certRotate,omitempty"`
+	Token                   *TokenConfig                   `yaml:"token,omitempty"`
+	Preflight               *PreflightConfig               `yaml:"preflight,omitempty"`
+	Airgap                  *AirgapConfig                  `yaml:"airgap,omitempty"`
+	Registries              *RegistriesConfig              `yaml:"registries,omitempty"`
+	HealthCheck             *HealthCheckConfig             `yaml:"healthCheck,omitempty"`
+	Network                 *NetworkConfig                 `yaml:"network,omitempty"`
+	Disable                 *DisableConfig                 `yaml:"disable,omitempty"`
+	TLS                     *TLSConfig                     `yaml:"tls,omitempty"`
+	Kubeconfig              *KubeconfigConfig              `yaml:"kubeconfig,omitempty"`
+	Datastore               *DatastoreConfig               `yaml:"datastore,omitempty"`
+	Server                  *ServerConfig                  `yaml:"server,omitempty"`
+	Security                *SecurityConfig                `yaml:"security,omitempty"`
 	ComponentArgs           *ComponentArgsConfig           `yaml:"componentArgs,omitempty"`
 	Runtime                 *RuntimeConfig                 `yaml:"runtime,omitempty"`
 	EtcdAdvanced            *EtcdAdvancedConfig            `yaml:"etcdAdvanced,omitempty"`
