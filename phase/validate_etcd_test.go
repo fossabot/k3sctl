@@ -105,11 +105,11 @@ func TestValidateEtcdMembers_KnownServerAddresses(t *testing.T) {
 		Role:           cluster.RoleServer,
 		PrivateAddress: "10.0.0.1",
 	}
-	s1.ConnectionConfig.SSH = &ssh.Config{Address: "192.168.1.1"}
+	s1.SSH = &ssh.Config{Address: "192.168.1.1"}
 	s1.Metadata.IsLeader = true
 
 	s2 := &cluster.Host{Role: cluster.RoleServer}
-	s2.ConnectionConfig.SSH = &ssh.Config{Address: "192.168.1.2"}
+	s2.SSH = &ssh.Config{Address: "192.168.1.2"}
 
 	agent := &cluster.Host{
 		Role:           cluster.RoleAgent,
