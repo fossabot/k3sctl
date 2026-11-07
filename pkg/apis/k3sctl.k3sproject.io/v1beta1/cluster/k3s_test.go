@@ -776,14 +776,14 @@ preflight:
 func TestGenerateServerConfig_NetworkConfig(t *testing.T) {
 	k := &K3s{
 		Network: &NetworkConfig{
-			ClusterCIDR:       []string{"10.42.0.0/16", "fd42::/48"},
-			ServiceCIDR:       []string{"10.43.0.0/16", "fd43::/112"},
-			ClusterDNS:        []string{"10.43.0.10"},
-			ClusterDomain:     "my.cluster",
-			NodePortRange:     "30000-40000",
-			FlannelBackend:    "wireguard-native",
-			FlannelIPv6Masq:   true,
-			FlannelExternalIP: true,
+			ClusterCIDR:        []string{"10.42.0.0/16", "fd42::/48"},
+			ServiceCIDR:        []string{"10.43.0.0/16", "fd43::/112"},
+			ClusterDNS:         []string{"10.43.0.10"},
+			ClusterDomain:      "my.cluster",
+			NodePortRange:      "30000-40000",
+			FlannelBackend:     "wireguard-native",
+			FlannelIPv6Masq:    true,
+			FlannelExternalIP:  true,
 			EgressSelectorMode: "cluster",
 			ServiceLBNamespace: "lb-ns",
 		},
@@ -973,14 +973,14 @@ func TestGenerateServerConfig_SecurityConfig(t *testing.T) {
 func TestGenerateServerConfig_ComponentArgs(t *testing.T) {
 	k := &K3s{
 		ComponentArgs: &ComponentArgsConfig{
-			KubeAPIServer:             []string{"--audit-log-path=/var/log/audit.log"},
-			KubeControllerManager:     []string{"--node-cidr-mask-size=24"},
-			KubeScheduler:             []string{"--config=/etc/scheduler.yaml"},
+			KubeAPIServer:              []string{"--audit-log-path=/var/log/audit.log"},
+			KubeControllerManager:      []string{"--node-cidr-mask-size=24"},
+			KubeScheduler:              []string{"--config=/etc/scheduler.yaml"},
 			KubeCloudControllerManager: []string{"--cloud-provider=external"},
-			Kubelet:                   []string{"--max-pods=110"},
-			KubeProxy:                 []string{"--proxy-mode=ipvs"},
-			Etcd:                      []string{"--quota-backend-bytes=8589934592"},
-			HelmController:            []string{"--default-job-image=rancher/klipper-helm:v0.8.0"},
+			Kubelet:                    []string{"--max-pods=110"},
+			KubeProxy:                  []string{"--proxy-mode=ipvs"},
+			Etcd:                       []string{"--quota-backend-bytes=8589934592"},
+			HelmController:             []string{"--default-job-image=rancher/klipper-helm:v0.8.0"},
 		},
 	}
 	k.SetDefaults()
@@ -1028,9 +1028,9 @@ func TestGenerateServerConfig_ComponentArgs(t *testing.T) {
 func TestGenerateAgentConfig_ComponentArgs(t *testing.T) {
 	k := &K3s{
 		ComponentArgs: &ComponentArgsConfig{
-			KubeAPIServer:  []string{"--audit-log-path=/var/log/audit.log"},
-			Kubelet:        []string{"--max-pods=110"},
-			KubeProxy:      []string{"--proxy-mode=ipvs"},
+			KubeAPIServer: []string{"--audit-log-path=/var/log/audit.log"},
+			Kubelet:       []string{"--max-pods=110"},
+			KubeProxy:     []string{"--proxy-mode=ipvs"},
 		},
 	}
 	k.SetDefaults()

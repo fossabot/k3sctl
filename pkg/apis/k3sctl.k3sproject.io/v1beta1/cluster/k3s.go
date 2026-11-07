@@ -107,25 +107,25 @@ type HealthCheckConfig struct {
 }
 
 type NetworkConfig struct {
-	ClusterCIDR      []string `yaml:"clusterCIDR,omitempty"`
-	ServiceCIDR      []string `yaml:"serviceCIDR,omitempty"`
-	ClusterDNS       []string `yaml:"clusterDNS,omitempty"`
-	ClusterDomain    string   `yaml:"clusterDomain,omitempty"`
-	NodePortRange    string   `yaml:"nodePortRange,omitempty"`
-	FlannelBackend   string   `yaml:"flannelBackend,omitempty"`
-	FlannelIPv6Masq  bool     `yaml:"flannelIPv6Masq,omitempty"`
-	FlannelExternalIP bool    `yaml:"flannelExternalIP,omitempty"`
-	EgressSelectorMode string `yaml:"egressSelectorMode,omitempty"`
-	ServiceLBNamespace string `yaml:"serviceLBNamespace,omitempty"`
+	ClusterCIDR        []string `yaml:"clusterCIDR,omitempty"`
+	ServiceCIDR        []string `yaml:"serviceCIDR,omitempty"`
+	ClusterDNS         []string `yaml:"clusterDNS,omitempty"`
+	ClusterDomain      string   `yaml:"clusterDomain,omitempty"`
+	NodePortRange      string   `yaml:"nodePortRange,omitempty"`
+	FlannelBackend     string   `yaml:"flannelBackend,omitempty"`
+	FlannelIPv6Masq    bool     `yaml:"flannelIPv6Masq,omitempty"`
+	FlannelExternalIP  bool     `yaml:"flannelExternalIP,omitempty"`
+	EgressSelectorMode string   `yaml:"egressSelectorMode,omitempty"`
+	ServiceLBNamespace string   `yaml:"serviceLBNamespace,omitempty"`
 }
 
 type DisableConfig struct {
-	Components       []string `yaml:"components,omitempty"`
-	Scheduler        bool     `yaml:"scheduler,omitempty"`
-	CloudController  bool     `yaml:"cloudController,omitempty"`
-	KubeProxy        bool     `yaml:"kubeProxy,omitempty"`
-	NetworkPolicy    bool     `yaml:"networkPolicy,omitempty"`
-	HelmController   bool     `yaml:"helmController,omitempty"`
+	Components      []string `yaml:"components,omitempty"`
+	Scheduler       bool     `yaml:"scheduler,omitempty"`
+	CloudController bool     `yaml:"cloudController,omitempty"`
+	KubeProxy       bool     `yaml:"kubeProxy,omitempty"`
+	NetworkPolicy   bool     `yaml:"networkPolicy,omitempty"`
+	HelmController  bool     `yaml:"helmController,omitempty"`
 }
 
 type TLSConfig struct {
@@ -160,14 +160,14 @@ type SecurityConfig struct {
 }
 
 type ComponentArgsConfig struct {
-	KubeAPIServer             []string `yaml:"kubeAPIServer,omitempty"`
-	KubeControllerManager     []string `yaml:"kubeControllerManager,omitempty"`
-	KubeScheduler             []string `yaml:"kubeScheduler,omitempty"`
+	KubeAPIServer              []string `yaml:"kubeAPIServer,omitempty"`
+	KubeControllerManager      []string `yaml:"kubeControllerManager,omitempty"`
+	KubeScheduler              []string `yaml:"kubeScheduler,omitempty"`
 	KubeCloudControllerManager []string `yaml:"kubeCloudControllerManager,omitempty"`
-	Kubelet                   []string `yaml:"kubelet,omitempty"`
-	KubeProxy                 []string `yaml:"kubeProxy,omitempty"`
-	Etcd                      []string `yaml:"etcd,omitempty"`
-	HelmController            []string `yaml:"helmController,omitempty"`
+	Kubelet                    []string `yaml:"kubelet,omitempty"`
+	KubeProxy                  []string `yaml:"kubeProxy,omitempty"`
+	Etcd                       []string `yaml:"etcd,omitempty"`
+	HelmController             []string `yaml:"helmController,omitempty"`
 }
 
 type RuntimeConfig struct {
