@@ -15,10 +15,14 @@ name: Real K3s Install
 
 on:
   push:
-    branches:
-      - main
-      - ccr-385bb1e9-ed0ul0
-      - feat/cli-smoke-and-parity
+    branches: ["**"]
+    paths:
+      - ".github/workflows/real-install.yml"
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+  pull_request:
+    branches: [main]
     paths:
       - ".github/workflows/real-install.yml"
       - "**/*.go"
