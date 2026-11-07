@@ -1619,6 +1619,264 @@ func TestK3sValidate_ImageCredentialProviderPartial(t *testing.T) {
 	})
 }
 
+func TestGenerateServerConfig_TokenFiles(t *testing.T) {
+	k := &K3s{
+		Token: &TokenConfig{
+			TokenFile:      "/etc/rancher/k3s/token",
+			AgentTokenFile: "/etc/rancher/k3s/agent-token",
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, "/etc/rancher/k3s/token", config["token-file"])
+	assert.Equal(t, "/etc/rancher/k3s/agent-token", config["agent-token-file"])
+}
+
+func TestK3sValidate_TokenFileMutualExclusion(t *testing.T) {
+	t.Run("serverToken and tokenFile conflict", func(t *testing.T) {
+		k := K3s{Token: &TokenConfig{ServerToken: "tok", TokenFile: "/file"}}
+		err := k.Validate()
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "mutually exclusive")
+	})
+	t.Run("agentToken and agentTokenFile conflict", func(t *testing.T) {
+		k := K3s{Token: &TokenConfig{AgentToken: "tok", AgentTokenFile: "/file"}}
+		assert.Error(t, k.Validate())
+	})
+	t.Run("tokenFile alone is valid", func(t *testing.T) {
+		k := K3s{Token: &TokenConfig{TokenFile: "/file"}}
+		assert.NoError(t, k.Validate())
+	})
+	t.Run("agentTokenFile alone is valid", func(t *testing.T) {
+		k := K3s{Token: &TokenConfig{AgentTokenFile: "/file"}}
+		assert.NoError(t, k.Validate())
+	})
+}
+
+func TestGenerateServerConfig_KubeconfigPath(t *testing.T) {
+	k := &K3s{
+		Kubeconfig: &KubeconfigConfig{
+			Path: "/output/kubeconfig.yaml",
+			Mode: "600",
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, "/output/kubeconfig.yaml", config["write-kubeconfig"])
+	assert.Equal(t, "600", config["write-kubeconfig-mode"])
+}
+
+func TestGenerateServerConfig_SupervisorMetricsAndPprof(t *testing.T) {
+	k := &K3s{
+		Server: &ServerConfig{
+			SupervisorMetrics: true,
+			EnablePprof:       true,
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, true, config["supervisor-metrics"])
+	assert.Equal(t, true, config["enable-pprof"])
+}
+
+func TestGenerateServerConfig_SecurityRootlessAndBundledBin(t *testing.T) {
+	k := &K3s{
+		Security: &SecurityConfig{
+			Rootless:         true,
+			PreferBundledBin: true,
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, true, config["rootless"])
+	assert.Equal(t, true, config["prefer-bundled-bin"])
+}
+
+func TestGenerateAgentConfig_SecurityRootlessAndBundledBin(t *testing.T) {
+	k := &K3s{
+		Security: &SecurityConfig{
+			Rootless:         true,
+			PreferBundledBin: true,
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleAgent}
+
+	data, err := k.GenerateAgentConfig(host, "10.0.0.1", "token")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, true, config["rootless"])
+	assert.Equal(t, true, config["prefer-bundled-bin"])
+}
+
+func TestGenerateServerConfig_ContainerRuntimeEndpoint(t *testing.T) {
+	k := &K3s{
+		Runtime: &RuntimeConfig{
+			ContainerRuntimeEndpoint: "unix:///run/crio/crio.sock",
+			ImageServiceEndpoint:     "unix:///run/crio/crio.sock",
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, "unix:///run/crio/crio.sock", config["container-runtime-endpoint"])
+	assert.Equal(t, "unix:///run/crio/crio.sock", config["image-service-endpoint"])
+}
+
+func TestGenerateAgentConfig_ContainerRuntimeEndpoint(t *testing.T) {
+	k := &K3s{
+		Runtime: &RuntimeConfig{
+			ContainerRuntimeEndpoint: "unix:///run/crio/crio.sock",
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleAgent}
+
+	data, err := k.GenerateAgentConfig(host, "10.0.0.1", "token")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, "unix:///run/crio/crio.sock", config["container-runtime-endpoint"])
+}
+
+func TestGenerateServerConfig_DisableDefaultRegistryEndpoint(t *testing.T) {
+	k := &K3s{
+		EmbeddedRegistry: &EmbeddedRegistryConfig{
+			Enabled:                        true,
+			DisableDefaultRegistryEndpoint: true,
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleServer}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, true, config["embedded-registry"])
+	assert.Equal(t, true, config["disable-default-registry-endpoint"])
+}
+
+func TestGenerateAgentConfig_DisableDefaultRegistryEndpoint(t *testing.T) {
+	k := &K3s{
+		EmbeddedRegistry: &EmbeddedRegistryConfig{
+			DisableDefaultRegistryEndpoint: true,
+		},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleAgent}
+
+	data, err := k.GenerateAgentConfig(host, "10.0.0.1", "token")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, true, config["disable-default-registry-endpoint"])
+}
+
+func TestGenerateAgentConfig_LBServerPort(t *testing.T) {
+	k := &K3s{
+		Agent: &AgentConfig{LBServerPort: 16443},
+	}
+	k.SetDefaults()
+	host := &Host{Role: RoleAgent}
+
+	data, err := k.GenerateAgentConfig(host, "10.0.0.1", "token")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, 16443, config["lb-server-port"])
+}
+
+func TestK3sValidate_AgentLBServerPort(t *testing.T) {
+	t.Run("valid port", func(t *testing.T) {
+		k := K3s{Agent: &AgentConfig{LBServerPort: 6444}}
+		assert.NoError(t, k.Validate())
+	})
+	t.Run("invalid port", func(t *testing.T) {
+		k := K3s{Agent: &AgentConfig{LBServerPort: 99999}}
+		assert.Error(t, k.Validate())
+	})
+}
+
+func TestGenerateServerConfig_WithNodeID(t *testing.T) {
+	k := &K3s{}
+	k.SetDefaults()
+	host := &Host{
+		Role:       RoleServer,
+		WithNodeID: true,
+	}
+
+	data, err := k.GenerateServerConfig(host, "", true, "")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, true, config["with-node-id"])
+}
+
+func TestGenerateAgentConfig_WithNodeID(t *testing.T) {
+	k := &K3s{}
+	k.SetDefaults()
+	host := &Host{
+		Role:       RoleAgent,
+		WithNodeID: true,
+	}
+
+	data, err := k.GenerateAgentConfig(host, "10.0.0.1", "token")
+	require.NoError(t, err)
+
+	var config map[string]any
+	require.NoError(t, yaml.Unmarshal(data, &config))
+
+	assert.Equal(t, true, config["with-node-id"])
+}
+
 func TestK3sYAMLRoundTrip_NewFeaturesV2(t *testing.T) {
 	input := `
 version: v1.31.0+k3s1
@@ -1688,4 +1946,60 @@ etcdSnapshots:
 	assert.Equal(t, "s3-secret", k.EtcdSnapshots.S3.ConfigSecret)
 	assert.Equal(t, "30s", k.EtcdSnapshots.S3.Timeout)
 	assert.Equal(t, 5, k.EtcdSnapshots.S3.Retention)
+}
+
+func TestK3sYAMLRoundTrip_NewFeaturesV3(t *testing.T) {
+	input := `
+version: v1.31.0+k3s1
+token:
+  tokenFile: /etc/rancher/k3s/token
+  agentTokenFile: /etc/rancher/k3s/agent-token
+kubeconfig:
+  mode: "600"
+  path: /output/kubeconfig.yaml
+server:
+  advertiseAddress: 10.0.0.1
+  supervisorMetrics: true
+  enablePprof: true
+security:
+  rootless: true
+  preferBundledBin: true
+runtime:
+  containerRuntimeEndpoint: unix:///run/crio/crio.sock
+  imageServiceEndpoint: unix:///run/crio/crio.sock
+embeddedRegistry:
+  enabled: true
+  disableDefaultRegistryEndpoint: true
+agent:
+  lbServerPort: 16443
+`
+	var k K3s
+	require.NoError(t, yaml.Unmarshal([]byte(input), &k))
+
+	require.NotNil(t, k.Token)
+	assert.Equal(t, "/etc/rancher/k3s/token", k.Token.TokenFile)
+	assert.Equal(t, "/etc/rancher/k3s/agent-token", k.Token.AgentTokenFile)
+
+	require.NotNil(t, k.Kubeconfig)
+	assert.Equal(t, "/output/kubeconfig.yaml", k.Kubeconfig.Path)
+	assert.Equal(t, "600", k.Kubeconfig.Mode)
+
+	require.NotNil(t, k.Server)
+	assert.True(t, k.Server.SupervisorMetrics)
+	assert.True(t, k.Server.EnablePprof)
+
+	require.NotNil(t, k.Security)
+	assert.True(t, k.Security.Rootless)
+	assert.True(t, k.Security.PreferBundledBin)
+
+	require.NotNil(t, k.Runtime)
+	assert.Equal(t, "unix:///run/crio/crio.sock", k.Runtime.ContainerRuntimeEndpoint)
+	assert.Equal(t, "unix:///run/crio/crio.sock", k.Runtime.ImageServiceEndpoint)
+
+	require.NotNil(t, k.EmbeddedRegistry)
+	assert.True(t, k.EmbeddedRegistry.Enabled)
+	assert.True(t, k.EmbeddedRegistry.DisableDefaultRegistryEndpoint)
+
+	require.NotNil(t, k.Agent)
+	assert.Equal(t, 16443, k.Agent.LBServerPort)
 }

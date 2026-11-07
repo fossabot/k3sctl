@@ -67,6 +67,7 @@ type Host struct {
 	NodeExternalIP   []string          `yaml:"nodeExternalIP,omitempty"`
 	NodeInternalDNS  []string          `yaml:"nodeInternalDNS,omitempty"`
 	NodeExternalDNS  []string          `yaml:"nodeExternalDNS,omitempty"`
+	WithNodeID       bool              `yaml:"withNodeID,omitempty"`
 	NoFlannel        bool              `yaml:"noFlannel,omitempty"`
 	InstallFlags     Flags             `yaml:"installFlags,omitempty"`
 	Environment      map[string]string `yaml:"environment,omitempty"`
