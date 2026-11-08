@@ -93,6 +93,18 @@ jobs:
             -- -tags=integration -timeout 30m -v ./integration/localhost/ \
             -run TestLocalhostSingleNode
 
+      - name: Print apply log on failure
+        if: failure()
+        run: |
+          set +e
+          artifact_dir="integration-artifacts/${{ env.K3SCTL_RUN_ID }}"
+          for f in "${artifact_dir}"/*.log "${artifact_dir}"/*.yaml*; do
+            [ -f "$f" ] || continue
+            echo "=== ${f} ==="
+            cat "$f"
+            echo ""
+          done
+
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v4
