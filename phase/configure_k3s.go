@@ -69,6 +69,9 @@ func (p *ConfigureK3s) Run(ctx context.Context) error {
 		if configChanged {
 			h.Metadata.NeedsConfigRestart = true
 			slog.Info(fmt.Sprintf("%s: config.yaml changed, will restart K3s", h))
+			if h.IsServer() {
+				p.removeSkipFiles(h)
+			}
 		}
 
 		return nil
@@ -122,5 +125,18 @@ func generateClusterToken() (string, error) {
 // only difference is a trailing newline.
 func configBytesEqual(existing, desired []byte) bool {
 	return strings.TrimSpace(string(existing)) == strings.TrimSpace(string(desired))
+}
+
+// removeSkipFiles deletes all .skip files from the K3s manifests directory.
+// K3s recreates them on startup for components listed in --disable, so removing
+// them before a restart lets re-enabled components come back.
+func (p *ConfigureK3s) removeSkipFiles(h *cluster.Host) {
+	manifestsDir := fmt.Sprintf("%s/server/manifests", h.K3sDataDir())
+	cmd := fmt.Sprintf("find %s -maxdepth 1 -name '*.skip' -delete 2>/dev/null", shellQuote(manifestsDir))
+	if err := h.Sudo().Exec(cmd); err != nil {
+		slog.Warn(fmt.Sprintf("%s: failed to remove .skip files: %v", h, err))
+	} else {
+		slog.Info(fmt.Sprintf("%s: removed .skip files from %s", h, manifestsDir))
+	}
 }
 
