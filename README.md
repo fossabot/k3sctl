@@ -39,23 +39,62 @@ Linux hosts only.
 
 ## Installation
 
-From a release, download the binary for your platform and place it on your
-`PATH`:
+### Homebrew (macOS / Linux)
 
 ```sh
-curl -sSfL -o k3sctl \
-  https://github.com/nirantarasi/k3sctl/releases/latest/download/k3sctl_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m)
-chmod +x k3sctl
-sudo install -m 755 k3sctl /usr/local/bin/k3sctl
+brew install nirantarasi/tap/k3sctl
 ```
 
-With Go:
+### Shell script (Linux / macOS)
+
+```sh
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
+case "$ARCH" in
+  x86_64)  ARCH="amd64" ;;
+  aarch64) ARCH="arm64" ;;
+  armv7l)  ARCH="arm" ;;
+esac
+VERSION=$(curl -sI https://github.com/nirantarasi/k3sctl/releases/latest | grep -i location | sed 's/.*tag\///' | tr -d '\r\n')
+curl -sSfL "https://github.com/nirantarasi/k3sctl/releases/download/${VERSION}/k3sctl_${VERSION#v}_${OS}_${ARCH}.tar.gz" | tar xz k3sctl
+sudo install -m 755 k3sctl /usr/local/bin/k3sctl
+rm -f k3sctl
+```
+
+### Debian / Ubuntu
+
+```sh
+VERSION=$(curl -sI https://github.com/nirantarasi/k3sctl/releases/latest | grep -i location | sed 's/.*tag\///' | tr -d '\r\n')
+curl -sSfL -O "https://github.com/nirantarasi/k3sctl/releases/download/${VERSION}/k3sctl_${VERSION#v}_linux_amd64.deb"
+sudo dpkg -i k3sctl_*.deb
+rm -f k3sctl_*.deb
+```
+
+### RHEL / Fedora
+
+```sh
+VERSION=$(curl -sI https://github.com/nirantarasi/k3sctl/releases/latest | grep -i location | sed 's/.*tag\///' | tr -d '\r\n')
+curl -sSfL -O "https://github.com/nirantarasi/k3sctl/releases/download/${VERSION}/k3sctl_${VERSION#v}_linux_amd64.rpm"
+sudo rpm -i k3sctl_*.rpm
+rm -f k3sctl_*.rpm
+```
+
+### Alpine
+
+```sh
+VERSION=$(curl -sI https://github.com/nirantarasi/k3sctl/releases/latest | grep -i location | sed 's/.*tag\///' | tr -d '\r\n')
+curl -sSfL -O "https://github.com/nirantarasi/k3sctl/releases/download/${VERSION}/k3sctl_${VERSION#v}_linux_amd64.apk"
+sudo apk add --allow-untrusted k3sctl_*.apk
+rm -f k3sctl_*.apk
+```
+
+### With Go
 
 ```sh
 go install github.com/nirantarasi/k3sctl@latest
 ```
 
-Or build it yourself with [Task](https://taskfile.dev):
+### Build from source
 
 ```sh
 go install github.com/go-task/task/v3/cmd/task@latest
