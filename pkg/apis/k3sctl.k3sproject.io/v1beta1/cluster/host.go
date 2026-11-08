@@ -104,6 +104,7 @@ type HostMetadata struct {
 	KubernetesNodeName     string
 	NeedsUpgrade           bool
 	NeedsReinstall         bool
+	NeedsConfigRestart     bool
 	BinaryProvider         BinaryProvider
 }
 

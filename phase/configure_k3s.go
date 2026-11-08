@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io/fs"
+	"strings"
 
 	"log/slog"
 
@@ -56,11 +57,19 @@ func (p *ConfigureK3s) Run(ctx context.Context) error {
 			return fmt.Errorf("%s: generate config: %w", h, err)
 		}
 
+		configChanged := h.Metadata.K3sServiceRunning &&
+			!configBytesEqual([]byte(h.Metadata.K3sExistingConfig), configData)
+
 		configPath := h.Configurer.K3sConfigPath()
 		if err := h.Sudo().FS().WriteFile(configPath, configData, fs.FileMode(0600)); err != nil {
 			return fmt.Errorf("%s: write config: %w", h, err)
 		}
 		slog.Info(fmt.Sprintf("%s: wrote K3s config to %s", h, configPath))
+
+		if configChanged {
+			h.Metadata.NeedsConfigRestart = true
+			slog.Info(fmt.Sprintf("%s: config.yaml changed, will restart K3s", h))
+		}
 
 		return nil
 	})
@@ -106,4 +115,11 @@ func generateClusterToken() (string, error) {
 		return "", fmt.Errorf("generate token: %w", err)
 	}
 	return hex.EncodeToString(buf), nil
+}
+
+// configBytesEqual compares two YAML config byte slices for semantic equality
+// by normalizing trailing whitespace. This prevents spurious restarts when the
+// only difference is a trailing newline.
+func configBytesEqual(existing, desired []byte) bool {
+	return strings.TrimSpace(string(existing)) == strings.TrimSpace(string(desired))
 }
