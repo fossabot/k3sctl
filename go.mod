@@ -1,4 +1,4 @@
-module github.com/vinaycharlie01/k3sctl
+module github.com/nirantarasi/k3sctl
 
 go 1.27.3
 

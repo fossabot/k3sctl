@@ -16,7 +16,7 @@ import (
 	"github.com/k0sproject/rig/v2/protocol/ssh"
 	"github.com/k0sproject/rig/v2/protocol/winrm"
 	"github.com/k0sproject/rig/v2/remotefs"
-	"github.com/vinaycharlie01/k3sctl/configurer"
+	"github.com/nirantarasi/k3sctl/configurer"
 )
 
 //go:generate go run github.com/maxbrunsfeld/counterfeiter/v6@v6.14.0 --fake-name FakeBinaryProvider -o ./mocks/fake_binary_provider.go . BinaryProvider

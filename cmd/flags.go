@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/urfave/cli/v2"
-	"github.com/vinaycharlie01/k3sctl/pkg/apis/k3sctl.k3sproject.io/v1beta1"
-	"github.com/vinaycharlie01/k3sctl/pkg/manifest"
+	"github.com/nirantarasi/k3sctl/pkg/apis/k3sctl.k3sproject.io/v1beta1"
+	"github.com/nirantarasi/k3sctl/pkg/manifest"
 )
 
 func GlobalFlags() []cli.Flag {

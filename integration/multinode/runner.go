@@ -12,7 +12,7 @@ import (
 
 	"log/slog"
 
-	"github.com/vinaycharlie01/k3sctl/integration/environment"
+	"github.com/nirantarasi/k3sctl/integration/environment"
 )
 
 const (

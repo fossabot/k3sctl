@@ -7,8 +7,8 @@ builds:
       - CGO_ENABLED=0
     ldflags:
       - -s -w
-      - -X github.com/vinaycharlie01/k3sctl/version.Version={{.Version}}
-      - -X github.com/vinaycharlie01/k3sctl/version.GitCommit={{.ShortCommit}}
+      - -X github.com/nirantarasi/k3sctl/version.Version={{.Version}}
+      - -X github.com/nirantarasi/k3sctl/version.GitCommit={{.ShortCommit}}
     goos:
       - linux
       - darwin

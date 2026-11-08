@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/vinaycharlie01/k3sctl/pkg/k3s/binprovider"
-	"github.com/vinaycharlie01/k3sctl/pkg/k3s/binprovider/mocks"
+	"github.com/nirantarasi/k3sctl/pkg/k3s/binprovider"
+	"github.com/nirantarasi/k3sctl/pkg/k3s/binprovider/mocks"
 )
 
 func TestNewGitHubURL(t *testing.T) {

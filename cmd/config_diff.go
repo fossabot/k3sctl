@@ -6,7 +6,7 @@ import (
 	"log/slog"
 
 	"github.com/urfave/cli/v2"
-	"github.com/vinaycharlie01/k3sctl/action"
+	"github.com/nirantarasi/k3sctl/action"
 )
 
 func configDiffCommand() *cli.Command {

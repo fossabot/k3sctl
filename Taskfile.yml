@@ -13,8 +13,8 @@ vars:
     sh: git rev-parse --short HEAD 2>/dev/null || echo unknown
   LDFLAGS: >-
     -s -w
-    -X github.com/vinaycharlie01/k3sctl/version.Version={{.VERSION}}
-    -X github.com/vinaycharlie01/k3sctl/version.GitCommit={{.GIT_COMMIT}}
+    -X github.com/nirantarasi/k3sctl/version.Version={{.VERSION}}
+    -X github.com/nirantarasi/k3sctl/version.GitCommit={{.GIT_COMMIT}}
 
 tasks:
   default:

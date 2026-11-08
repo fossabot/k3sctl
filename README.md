@@ -44,7 +44,7 @@ From a release, download the binary for your platform and place it on your
 
 ```sh
 curl -sSfL -o k3sctl \
-  https://github.com/vinaycharlie01/k3sctl/releases/latest/download/k3sctl_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m)
+  https://github.com/nirantarasi/k3sctl/releases/latest/download/k3sctl_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m)
 chmod +x k3sctl
 sudo install -m 755 k3sctl /usr/local/bin/k3sctl
 ```
@@ -52,7 +52,7 @@ sudo install -m 755 k3sctl /usr/local/bin/k3sctl
 With Go:
 
 ```sh
-go install github.com/vinaycharlie01/k3sctl@latest
+go install github.com/nirantarasi/k3sctl@latest
 ```
 
 Or build it yourself with [Task](https://taskfile.dev):
