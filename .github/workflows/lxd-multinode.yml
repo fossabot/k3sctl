@@ -36,11 +36,14 @@ name: LXD Multi-Node K3s
 
 on:
   push:
-    branches: ["**"]
+    branches: [main, "**"]
     paths:
       - ".github/workflows/lxd-multinode.yml"
       - "integration/**"
       - "phase/**"
+      - "cmd/**"
+      - "pkg/**"
+      - "configurer/**"
       - "go.mod"
       - "go.sum"
   pull_request:
