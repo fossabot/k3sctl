@@ -91,7 +91,14 @@ func (p *InitializeK3s) installK3sService(h *cluster.Host) error {
 }
 
 func (p *InitializeK3s) waitForReady(ctx context.Context, h *cluster.Host) error {
-	return retry.Context(ctx, node.KubeNodeReadyFunc(h, h.KubernetesNodeName()),
+	kc, err := kubeClientOrBuild(p.Config.Metadata.KubeClient, h)
+	if err != nil {
+		return fmt.Errorf("build kube client for readiness check: %w", err)
+	}
+	if p.Config.Metadata.KubeClient == nil {
+		p.Config.Metadata.KubeClient = kc
+	}
+	return retry.Context(ctx, node.KubeNodeReadyFunc(kc, h.KubernetesNodeName()),
 		retry.Timeout(5*time.Minute), retry.Interval(10*time.Second))
 }
 

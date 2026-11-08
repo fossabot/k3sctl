@@ -41,17 +41,18 @@ func (p *ResetAgents) Run(ctx context.Context) error {
 func (p *ResetAgents) resetAgent(ctx context.Context, h *cluster.Host) error {
 	slog.Info(fmt.Sprintf("%s: resetting K3s agent", h))
 
-	if !p.NoDrain && p.leader != nil {
-		if err := h.CordonNode(p.leader); err != nil {
+	kc := p.Config.Metadata.KubeClient
+	if !p.NoDrain && kc != nil {
+		if err := h.CordonNode(ctx, kc); err != nil {
 			slog.Warn(fmt.Sprintf("%s: cordon failed: %v", h, err))
 		}
-		if err := h.DrainNode(p.leader, p.Config.Spec.Options.GetDrainOptions()); err != nil {
+		if err := h.DrainNode(ctx, kc, p.Config.Spec.Options.GetDrainOptions()); err != nil {
 			slog.Warn(fmt.Sprintf("%s: drain failed: %v", h, err))
 		}
 	}
 
-	if !p.NoDelete && p.leader != nil {
-		if err := h.DeleteNode(p.leader); err != nil {
+	if !p.NoDelete && kc != nil {
+		if err := h.DeleteNode(ctx, kc); err != nil {
 			slog.Warn(fmt.Sprintf("%s: delete node failed: %v", h, err))
 		}
 	}

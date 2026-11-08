@@ -52,15 +52,16 @@ func (p *Reinstall) reinstall(ctx context.Context, h *cluster.Host) error {
 	}
 	slog.Info(fmt.Sprintf("%s: reconciling K3s service (%s)", h, reason))
 
-	if h.IsAgent() && !p.NoDrain && p.leader != nil {
-		if err := h.CordonNode(p.leader); err != nil {
+	kc := p.Config.Metadata.KubeClient
+	if h.IsAgent() && !p.NoDrain && kc != nil {
+		if err := h.CordonNode(ctx, kc); err != nil {
 			slog.Warn(fmt.Sprintf("%s: cordon failed: %v", h, err))
 		}
-		if err := h.DrainNode(p.leader, p.Config.Spec.Options.GetDrainOptions()); err != nil {
+		if err := h.DrainNode(ctx, kc, p.Config.Spec.Options.GetDrainOptions()); err != nil {
 			slog.Warn(fmt.Sprintf("%s: drain failed: %v", h, err))
 		}
 		defer func() {
-			if err := h.UncordonNode(p.leader); err != nil {
+			if err := h.UncordonNode(ctx, kc); err != nil {
 				slog.Warn(fmt.Sprintf("%s: uncordon failed: %v", h, err))
 			}
 		}()

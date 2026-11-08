@@ -59,25 +59,25 @@ func (p *ValidateEtcdMembers) Run(ctx context.Context) error {
 	}
 
 	servers := p.Config.Spec.Hosts.Servers()
+	kc := p.Config.Metadata.KubeClient
 	return p.parallelDo(ctx, servers, func(ctx context.Context, h *cluster.Host) error {
 		if h == p.leader {
 			return nil
 		}
 
-		output, err := h.Sudo().ExecOutput(
-			fmt.Sprintf("%s kubectl get node %s -o jsonpath='{.status.conditions[?(@.type==\"Ready\")].status}' 2>/dev/null || echo 'unknown'",
-				shellQuote(h.K3sBinaryDir()), shellQuote(h.Metadata.Hostname)),
-		)
-		if err != nil {
-			slog.Warn(fmt.Sprintf("%s: could not check node readiness: %v", h, err))
-			return nil
-		}
-
-		output = strings.Trim(output, "'")
-		if output != "True" {
-			slog.Warn(fmt.Sprintf("%s: node is not ready (status: %s)", h, output))
+		if kc != nil {
+			ready, err := kc.IsNodeReady(ctx, h.Metadata.Hostname)
+			if err != nil {
+				slog.Warn(fmt.Sprintf("%s: could not check node readiness: %v", h, err))
+				return nil
+			}
+			if !ready {
+				slog.Warn(fmt.Sprintf("%s: node is not ready", h))
+			} else {
+				slog.Info(fmt.Sprintf("%s: node is ready", h))
+			}
 		} else {
-			slog.Info(fmt.Sprintf("%s: node is ready", h))
+			slog.Warn(fmt.Sprintf("%s: no kubernetes client available, skipping node readiness check", h))
 		}
 
 		return nil
