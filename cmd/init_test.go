@@ -68,4 +68,23 @@ func TestInitTemplateRoundTrips(t *testing.T) {
 		assert.Equal(t, cluster.RoleAgent, cfg.Spec.Hosts[1].Role)
 		assert.Equal(t, "192.168.1.11", cfg.Spec.Hosts[1].SSH.Address)
 	})
+
+	t.Run("localhost", func(t *testing.T) {
+		path := writeConfigFile(t, renderInitTemplate(t, initData{
+			Name:      "local",
+			Localhost: true,
+			Version:   "v1.30.0+k3s1",
+		}))
+
+		cfg, err := loadConfig(path)
+		require.NoError(t, err)
+
+		assert.Equal(t, "local", cfg.Metadata.Name)
+		require.Len(t, cfg.Spec.Hosts, 1)
+		host := cfg.Spec.Hosts[0]
+		assert.Equal(t, cluster.RoleServer, host.Role)
+		assert.True(t, host.Localhost)
+		assert.Nil(t, host.SSH)
+		assert.Equal(t, "v1.30.0+k3s1", cfg.Spec.K3s.Version)
+	})
 }
