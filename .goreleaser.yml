@@ -26,16 +26,16 @@ builds:
         goarch: arm
 
 archives:
-  - formats: [tar.gz]
+  - format: tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
-    formats_override:
+    format_overrides:
       - goos: windows
-        formats: [zip]
+        format: zip
 
 checksum:
   name_template: checksums.txt
 
-homebrew:
+brews:
   - repository:
       owner: nirantarasi
       name: homebrew-tap
