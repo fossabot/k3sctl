@@ -400,5 +400,5 @@ func (h *Host) OSKind() (string, error) {
 }
 
 func (h *Host) DownloadURL(url, dest string) error {
-	return h.Sudo().Exec(fmt.Sprintf("curl -sSfL -o %s %s", shellQuote(dest), shellQuote(url)))
+	return h.Sudo().Exec(fmt.Sprintf("curl -sSfL --retry 5 --retry-delay 2 --retry-all-errors -o %s %s", shellQuote(dest), shellQuote(url)))
 }
