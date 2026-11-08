@@ -106,6 +106,34 @@ func TestConfigBytesEqual(t *testing.T) {
 	}
 }
 
+func TestDisabledComponentsFromYAML(t *testing.T) {
+	tests := []struct {
+		name string
+		yaml string
+		want []string
+	}{
+		{"with disable list", "disable:\n- traefik\n- servicelb\n", []string{"traefik", "servicelb"}},
+		{"no disable key", "token: abc\n", nil},
+		{"empty config", "", nil},
+		{"single string disable", "disable: traefik\n", []string{"traefik"}},
+		{"empty disable list", "disable: []\n", nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := disabledComponentsFromYAML(tt.yaml)
+			if len(got) != len(tt.want) {
+				t.Fatalf("disabledComponentsFromYAML() = %v, want %v", got, tt.want)
+			}
+			for i := range got {
+				if got[i] != tt.want[i] {
+					t.Errorf("disabledComponentsFromYAML()[%d] = %q, want %q", i, got[i], tt.want[i])
+				}
+			}
+		})
+	}
+}
+
 func configurePhase(leader *cluster.Host, k3s *cluster.K3s) *ConfigureK3s {
 	p := &ConfigureK3s{leader: leader}
 	p.Config = &v1beta1.Cluster{Spec: &cluster.Spec{
