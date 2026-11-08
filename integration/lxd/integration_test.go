@@ -140,11 +140,11 @@ func TestLXDMultiNodeK3s(t *testing.T) {
 	}
 }
 
-// TestLXDExtendedFlags provisions a single-server + 1 agent cluster with all
-// the new K3s configuration flags enabled: withNodeID, preferBundledBin,
-// supervisorMetrics, enablePprof, kubeconfig mode, agent lbServerPort, embedded
-// registry, and custom labels. After install it verifies the flags took effect
-// by inspecting the K3s systemd unit and node labels.
+// TestLXDExtendedFlags provisions a single-server + 1 agent cluster with
+// K3s configuration flags enabled: preferBundledBin, supervisorMetrics,
+// enablePprof, kubeconfig mode, agent lbServerPort, embedded registry, and
+// custom labels. After install it verifies the flags took effect by inspecting
+// the K3s systemd unit and node labels.
 func TestLXDExtendedFlags(t *testing.T) {
 	setup := newLXDTestSetup(t, "flags")
 
@@ -201,7 +201,6 @@ func TestLXDExtendedFlags(t *testing.T) {
 			if serverNode != nil {
 				for _, flag := range []string{
 					"--prefer-bundled-bin",
-					"--with-node-id",
 					"--supervisor-metrics",
 					"--enable-pprof",
 				} {
@@ -213,7 +212,6 @@ func TestLXDExtendedFlags(t *testing.T) {
 			if agentNode != nil {
 				for _, flag := range []string{
 					"--prefer-bundled-bin",
-					"--with-node-id",
 					"--lb-server-port=6444",
 				} {
 					verifyFlagInUnit(t, sshRunner, ctx, agentNode.Address, "k3s-agent", flag)
@@ -227,7 +225,6 @@ func TestLXDExtendedFlags(t *testing.T) {
 	}
 
 	runner.SetK3sOverrides(&multinode.K3sOverrides{
-		WithNodeID:       true,
 		Security:         &cluster.SecurityConfig{PreferBundledBin: true},
 		Server:           &cluster.ServerConfig{SupervisorMetrics: true, EnablePprof: true},
 		Kubeconfig:       &cluster.KubeconfigConfig{Mode: "0600"},
