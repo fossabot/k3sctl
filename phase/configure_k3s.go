@@ -139,4 +139,3 @@ func (p *ConfigureK3s) removeSkipFiles(h *cluster.Host) {
 		slog.Info(fmt.Sprintf("%s: removed .skip files from %s", h, manifestsDir))
 	}
 }
-
