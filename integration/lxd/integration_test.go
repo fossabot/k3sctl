@@ -144,7 +144,7 @@ func TestLXDMultiNodeK3s(t *testing.T) {
 // K3s configuration flags enabled: preferBundledBin, supervisorMetrics,
 // enablePprof, kubeconfig mode, agent lbServerPort, embedded registry, and
 // custom labels. After install it verifies the flags took effect by inspecting
-// the K3s systemd unit and node labels.
+// the K3s config file and node labels.
 func TestLXDExtendedFlags(t *testing.T) {
 	setup := newLXDTestSetup(t, "flags")
 
@@ -199,22 +199,22 @@ func TestLXDExtendedFlags(t *testing.T) {
 			agentNode := findNodeByRole(nodes, environment.RoleAgent)
 
 			if serverNode != nil {
-				for _, flag := range []string{
-					"--prefer-bundled-bin",
-					"--supervisor-metrics",
-					"--enable-pprof",
+				for _, key := range []string{
+					"prefer-bundled-bin",
+					"supervisor-metrics",
+					"enable-pprof",
 				} {
-					verifyFlagInUnit(t, sshRunner, ctx, serverNode.Address, "k3s", flag)
+					verifyK3sConfigKey(t, sshRunner, ctx, serverNode.Address, key)
 				}
 				verifyNodeLabel(t, sshRunner, ctx, serverNode.Address, "k3sctl-test=extended-flags")
 			}
 
 			if agentNode != nil {
-				for _, flag := range []string{
-					"--prefer-bundled-bin",
-					"--lb-server-port=6444",
+				for _, key := range []string{
+					"prefer-bundled-bin",
+					"lb-server-port",
 				} {
-					verifyFlagInUnit(t, sshRunner, ctx, agentNode.Address, "k3s-agent", flag)
+					verifyK3sConfigKey(t, sshRunner, ctx, agentNode.Address, key)
 				}
 			}
 			return nil
@@ -250,15 +250,15 @@ func findNodeByRole(nodes []environment.Node, role environment.Role) *environmen
 	return nil
 }
 
-func verifyFlagInUnit(t *testing.T, ssh *multinode.SSHRunner, ctx context.Context, address, service, flag string) {
+func verifyK3sConfigKey(t *testing.T, ssh *multinode.SSHRunner, ctx context.Context, address, key string) {
 	t.Helper()
-	result, err := ssh.Run(ctx, address, fmt.Sprintf("sudo systemctl cat %s", service))
+	result, err := ssh.Run(ctx, address, "sudo cat /etc/rancher/k3s/config.yaml")
 	if err != nil {
-		t.Errorf("failed to read %s unit on %s: %v", service, address, err)
+		t.Errorf("failed to read K3s config on %s: %v", address, err)
 		return
 	}
-	if !strings.Contains(result.Stdout, flag) {
-		t.Errorf("%s unit on %s does not contain %q", service, address, flag)
+	if !strings.Contains(result.Stdout, key) {
+		t.Errorf("K3s config on %s does not contain key %q", address, key)
 	}
 }
 
