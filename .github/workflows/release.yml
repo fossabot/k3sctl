@@ -17,6 +17,11 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+      - name: Install Chocolatey
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mono-devel
+          curl -sL https://community.chocolatey.org/install.sh | sudo bash
       - uses: goreleaser/goreleaser-action@v6
         with:
           version: "~> v2"
