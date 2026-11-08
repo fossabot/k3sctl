@@ -15,16 +15,22 @@ import (
 	"github.com/nirantarasi/k3sctl/pkg/apis/k3sctl.k3sproject.io/v1beta1/cluster"
 )
 
-// TestLXDConfigReconciliation verifies that changing K3s config.yaml on an
-// existing cluster and re-running apply actually restarts K3s so the change
-// takes effect. This is the core test for the config reconciliation fix.
+// TestLXDConfigReconciliation verifies the full config reconciliation lifecycle:
+// disable a component via apply, verify it stops, re-enable it via apply, verify
+// it starts again — all without upgrading K3s. This proves that apply is truly
+// declarative for config changes.
 //
 // Scenario:
-//  1. Install a single-server+agent cluster with Traefik enabled (default).
+//  1. Install a single-server+agent cluster with defaults (Traefik enabled).
 //  2. Verify Traefik is running.
 //  3. Re-apply with disable.components: [traefik, servicelb].
-//  4. Verify Traefik is no longer running.
-//  5. Re-apply with the same config again (idempotency check).
+//  4. Verify config.yaml has the disable field.
+//  5. Verify Traefik is no longer running.
+//  6. Idempotency — re-apply same disabled config, cluster stays healthy.
+//  7. Re-apply with Traefik re-enabled (remove disable stanza).
+//  8. Verify config.yaml no longer has the disable field.
+//  9. Verify Traefik is running again.
+// 10. Final idempotency — re-apply same enabled config.
 func TestLXDConfigReconciliation(t *testing.T) {
 	setup := newLXDTestSetup(t, "reconcile")
 
@@ -79,7 +85,7 @@ func TestLXDConfigReconciliation(t *testing.T) {
 		t.Fatalf("NewRunner() error = %v", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Minute)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Minute)
 	defer cancel()
 
 	// --- Step 1: Initial install with defaults (Traefik enabled) ---
@@ -88,11 +94,8 @@ func TestLXDConfigReconciliation(t *testing.T) {
 		t.Fatalf("initial apply failed: %v", err)
 	}
 
-	// Retrieve the node addresses from the LXD containers.
 	nodes, err := provider.Create(ctx)
 	if err != nil {
-		// The containers already exist from Run(), Create returns the existing
-		// addresses. If this fails, read them from the provider config.
 		t.Fatalf("get node addresses: %v", err)
 	}
 	serverNode := findNodeByRole(nodes, environment.RoleServer)
@@ -104,7 +107,7 @@ func TestLXDConfigReconciliation(t *testing.T) {
 	t.Log("Step 2: verify Traefik is running")
 	waitForPodState(t, sshRunner, ctx, serverNode.Address, "traefik", true)
 
-	// --- Step 3: Re-apply with Traefik and ServiceLB disabled ---
+	// --- Step 3: Disable Traefik and ServiceLB via apply ---
 	t.Log("Step 3: re-apply with Traefik and ServiceLB disabled")
 	runner.SetK3sOverrides(&multinode.K3sOverrides{
 		Disable: &cluster.DisableConfig{
@@ -112,13 +115,13 @@ func TestLXDConfigReconciliation(t *testing.T) {
 		},
 	})
 
-	configPath, err := runner.WriteConfig(nodes)
+	disabledConfigPath, err := runner.WriteConfig(nodes)
 	if err != nil {
-		t.Fatalf("write config: %v", err)
+		t.Fatalf("write disabled config: %v", err)
 	}
 
-	if err := runner.Apply(ctx, configPath); err != nil {
-		t.Fatalf("re-apply with disabled components failed: %v", err)
+	if err := runner.Apply(ctx, disabledConfigPath); err != nil {
+		t.Fatalf("apply with disabled components failed: %v", err)
 	}
 
 	// --- Step 4: Verify config.yaml has the disable field ---
@@ -129,24 +132,59 @@ func TestLXDConfigReconciliation(t *testing.T) {
 	t.Log("Step 5: verify Traefik is stopped")
 	waitForPodState(t, sshRunner, ctx, serverNode.Address, "traefik", false)
 
-	// --- Step 6: Idempotency — re-apply with same config, no unnecessary restart ---
-	t.Log("Step 6: idempotency check — re-apply same config")
-	if err := runner.Apply(ctx, configPath); err != nil {
-		t.Fatalf("idempotent re-apply failed: %v", err)
+	// --- Step 6: Idempotency — re-apply same disabled config ---
+	t.Log("Step 6: idempotency check — re-apply same disabled config")
+	if err := runner.Apply(ctx, disabledConfigPath); err != nil {
+		t.Fatalf("idempotent re-apply (disabled) failed: %v", err)
 	}
 
-	// Cluster should still be healthy
-	if err := runner.Verify(ctx, nodes, configPath); err != nil {
-		t.Fatalf("verification after idempotent re-apply failed: %v", err)
+	if err := runner.Verify(ctx, nodes, disabledConfigPath); err != nil {
+		t.Fatalf("verification after idempotent re-apply (disabled) failed: %v", err)
 	}
+
+	// Traefik should still be gone after the idempotent re-apply.
+	waitForPodState(t, sshRunner, ctx, serverNode.Address, "traefik", false)
+
+	// --- Step 7: Re-enable Traefik by removing the disable stanza ---
+	t.Log("Step 7: re-apply with Traefik re-enabled (no disable stanza)")
+	runner.SetK3sOverrides(nil)
+
+	enabledConfigPath, err := runner.WriteConfig(nodes)
+	if err != nil {
+		t.Fatalf("write re-enabled config: %v", err)
+	}
+
+	if err := runner.Apply(ctx, enabledConfigPath); err != nil {
+		t.Fatalf("apply to re-enable Traefik failed: %v", err)
+	}
+
+	// --- Step 8: Verify config.yaml no longer has the disable field ---
+	t.Log("Step 8: verify config.yaml no longer has disable field")
+	verifyK3sConfigKeyAbsent(t, sshRunner, ctx, serverNode.Address, "disable")
+
+	// --- Step 9: Verify Traefik is running again ---
+	t.Log("Step 9: verify Traefik is running again")
+	waitForPodState(t, sshRunner, ctx, serverNode.Address, "traefik", true)
+
+	// --- Step 10: Final idempotency — re-apply same enabled config ---
+	t.Log("Step 10: final idempotency check — re-apply same enabled config")
+	if err := runner.Apply(ctx, enabledConfigPath); err != nil {
+		t.Fatalf("idempotent re-apply (enabled) failed: %v", err)
+	}
+
+	if err := runner.Verify(ctx, nodes, enabledConfigPath); err != nil {
+		t.Fatalf("verification after idempotent re-apply (enabled) failed: %v", err)
+	}
+
+	waitForPodState(t, sshRunner, ctx, serverNode.Address, "traefik", true)
 }
 
 // waitForPodState waits for a pod name substring to be present (running=true) or
-// absent (running=false) in the pod list. Polls for up to 3 minutes.
+// absent (running=false) in the pod list. Polls for up to 5 minutes.
 func waitForPodState(t *testing.T, ssh *multinode.SSHRunner, ctx context.Context, address, podSubstr string, wantRunning bool) {
 	t.Helper()
 
-	deadline := time.Now().Add(3 * time.Minute)
+	deadline := time.Now().Add(5 * time.Minute)
 	for time.Now().Before(deadline) {
 		result, err := ssh.Run(ctx, address,
 			"sudo /usr/local/bin/k3s kubectl get pods -A --no-headers 2>/dev/null || true")
@@ -172,8 +210,21 @@ func waitForPodState(t *testing.T, ssh *multinode.SSHRunner, ctx context.Context
 	}
 
 	if wantRunning {
-		t.Errorf("timed out waiting for pod %q to be running on %s", podSubstr, address)
+		t.Fatalf("timed out waiting for pod %q to be running on %s", podSubstr, address)
 	} else {
-		t.Errorf("timed out waiting for pod %q to stop on %s", podSubstr, address)
+		t.Fatalf("timed out waiting for pod %q to stop on %s", podSubstr, address)
+	}
+}
+
+// verifyK3sConfigKeyAbsent checks that a key is NOT present in /etc/rancher/k3s/config.yaml.
+func verifyK3sConfigKeyAbsent(t *testing.T, ssh *multinode.SSHRunner, ctx context.Context, address, key string) {
+	t.Helper()
+	result, err := ssh.Run(ctx, address, "sudo cat /etc/rancher/k3s/config.yaml")
+	if err != nil {
+		t.Errorf("failed to read K3s config on %s: %v", address, err)
+		return
+	}
+	if strings.Contains(result.Stdout, key) {
+		t.Errorf("K3s config on %s still contains key %q after re-enable:\n%s", address, key, result.Stdout)
 	}
 }
