@@ -65,18 +65,36 @@ func dryRunFlag() *cli.BoolFlag {
 	}
 }
 
+var logLevel = new(slog.LevelVar)
+
 func initLogging(ctx *cli.Context) error {
-	level := slog.LevelInfo
+	logLevel.Set(slog.LevelInfo)
 	if ctx.Bool("trace") || ctx.Bool("debug") {
-		level = slog.LevelDebug
+		logLevel.Set(slog.LevelDebug)
 	}
 
 	handler := slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{
-		Level: level,
+		Level: logLevel,
 	})
 	slog.SetDefault(slog.New(handler))
 
 	return nil
+}
+
+func applyLoggingConfig(cfg *v1beta1.Cluster) {
+	if cfg.Spec == nil || cfg.Spec.Logging == nil {
+		return
+	}
+	format := cfg.Spec.Logging.Format
+	opts := &slog.HandlerOptions{Level: logLevel}
+	var handler slog.Handler
+	switch format {
+	case "json":
+		handler = slog.NewJSONHandler(os.Stderr, opts)
+	default:
+		handler = slog.NewTextHandler(os.Stderr, opts)
+	}
+	slog.SetDefault(slog.New(handler))
 }
 
 func loadConfig(configPath string) (*v1beta1.Cluster, error) {

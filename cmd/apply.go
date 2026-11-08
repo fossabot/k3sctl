@@ -68,6 +68,7 @@ func applyCommand() *cli.Command {
 			if err != nil {
 				return err
 			}
+			applyLoggingConfig(cfg)
 
 			// Keep this typed as io.Writer: a nil *os.File assigned to the
 			// interface would be non-nil, so Apply would add the kubeconfig

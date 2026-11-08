@@ -33,6 +33,7 @@ func kubeconfigCommand() *cli.Command {
 			if err != nil {
 				return err
 			}
+			applyLoggingConfig(cfg)
 
 			m := action.Kubeconfig(action.KubeconfigOptions{
 				Out:        os.Stdout,

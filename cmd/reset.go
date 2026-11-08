@@ -37,6 +37,7 @@ func resetCommand() *cli.Command {
 			if err != nil {
 				return err
 			}
+			applyLoggingConfig(cfg)
 
 			if !ctx.Bool("force") {
 				fmt.Println("This will remove K3s from all configured hosts.")

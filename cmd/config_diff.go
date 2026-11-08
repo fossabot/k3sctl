@@ -22,6 +22,7 @@ func configDiffCommand() *cli.Command {
 			if err != nil {
 				return err
 			}
+			applyLoggingConfig(cfg)
 
 			m := action.ConfigDiff(action.ConfigDiffOptions{
 				Writer: os.Stdout,
