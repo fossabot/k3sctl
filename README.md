@@ -56,9 +56,10 @@ case "$ARCH" in
   armv7l)  ARCH="arm" ;;
 esac
 VERSION=$(curl -sI https://github.com/nirantarasi/k3sctl/releases/latest | grep -i location | sed 's/.*tag\///' | tr -d '\r\n')
-curl -sSfL "https://github.com/nirantarasi/k3sctl/releases/download/${VERSION}/k3sctl_${VERSION#v}_${OS}_${ARCH}.tar.gz" | tar xz k3sctl
-sudo install -m 755 k3sctl /usr/local/bin/k3sctl
-rm -f k3sctl
+TMPDIR=$(mktemp -d)
+curl -sSfL "https://github.com/nirantarasi/k3sctl/releases/download/${VERSION}/k3sctl_${VERSION#v}_${OS}_${ARCH}.tar.gz" | tar xz -C "$TMPDIR"
+sudo install -m 755 "$TMPDIR/k3sctl" /usr/local/bin/k3sctl
+rm -rf "$TMPDIR"
 ```
 
 ### Debian / Ubuntu
