@@ -48,24 +48,6 @@ homebrew:
     test: |
       system "#{bin}/k3sctl", "version"
 
-chocolateys:
-  - name: k3sctl
-    owners: nirantarasi
-    authors: nirantarasi
-    project_url: "https://github.com/nirantarasi/k3sctl"
-    url_template: "https://github.com/nirantarasi/k3sctl/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    copyright: "2024 nirantarasi"
-    license_url: "https://github.com/nirantarasi/k3sctl/blob/main/LICENSE"
-    require_license_acceptance: false
-    bug_tracker_url: "https://github.com/nirantarasi/k3sctl/issues"
-    description: "CLI tool to manage k3s Kubernetes clusters"
-    tags: "kubernetes k3s cluster cli devops"
-    summary: "k3sctl manages k3s Kubernetes clusters"
-    release_notes: "https://github.com/nirantarasi/k3sctl/releases/tag/{{ .Tag }}"
-    api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
-    source_repo: "https://push.chocolatey.org/"
-    skip_publish: false
-
 winget:
   - name: k3sctl
     publisher: nirantarasi
