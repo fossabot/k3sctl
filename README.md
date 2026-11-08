@@ -23,6 +23,7 @@ back up and reset the cluster over SSH.
 - etcd snapshots (`backup`), etcd member validation and restore (`restore`)
 - Fetches a ready-to-use admin kubeconfig
 - Idempotent `apply`: safe to re-run, only changes what drifted
+- Config reconciliation: detects config.yaml changes and restarts K3s automatically
 - Rolling upgrades with drain/cordon for both servers and agents
 - Configuration validation (`config validate`)
 - Configuration diff (`config diff`) — preview what `apply` would change
@@ -410,6 +411,29 @@ Global flags: `--debug`, `--trace`, `--no-redact`.
 > focuses on declarative cluster lifecycle — use the YAML config with `apply` for
 > state changes, and `k3s` CLI directly for ad-hoc queries.
 
+## Config reconciliation
+
+`k3sctl apply` is fully declarative: changing a field in your YAML and
+re-running `apply` is enough to reconfigure a running cluster. The apply
+pipeline detects three kinds of drift and handles each one:
+
+| Change type | Example | What happens |
+|---|---|---|
+| **Version** | `k3s.version` bumped | Rolling upgrade with drain/cordon |
+| **Install flags** | `installFlags` or `environment` changed | Systemd unit rewritten, K3s restarted |
+| **Config** | `k3s.config`, `disable`, `registries` etc. | `config.yaml` rewritten, K3s restarted |
+
+On each apply, the `ConfigureK3s` phase compares the generated
+`config.yaml` against what is already on disk. When the content differs,
+it sets a `NeedsConfigRestart` flag that causes the `Reinstall` phase to
+restart K3s — without rewriting the systemd unit (since install flags
+have not changed). When the config is identical, no restart occurs,
+making re-applies idempotent.
+
+This means you can, for example, disable Traefik by adding `disable:
+components: [traefik]` to the config and running `apply` — K3s will
+restart and pick up the change.
+
 ## Roadmap
 
 ### Done
@@ -428,6 +452,7 @@ Global flags: `--debug`, `--trace`, `--no-redact`.
 - Cluster join token rotation on apply
 - Automated etcd snapshot scheduling and pruning on apply
 - Post-apply cluster health verification
+- Config reconciliation — detect config.yaml drift and restart K3s automatically
 
 ### Next
 
