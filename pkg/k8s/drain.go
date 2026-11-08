@@ -6,7 +6,6 @@ import (
 	"io"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/kubectl/pkg/drain"
@@ -90,14 +89,4 @@ func DrainOptionsFromCluster(enabled bool, timeout string, gracePeriod int, dele
 		DisableEviction:  disableEviction,
 		Force:            true,
 	}
-}
-
-// isNodeConditionTrue checks whether a condition type is True on the node.
-func isNodeConditionTrue(node *corev1.Node, condType corev1.NodeConditionType) bool {
-	for _, c := range node.Status.Conditions {
-		if c.Type == condType {
-			return c.Status == corev1.ConditionTrue
-		}
-	}
-	return false
 }
