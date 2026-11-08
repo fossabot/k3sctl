@@ -12,6 +12,7 @@ builds:
     goos:
       - linux
       - darwin
+      - windows
     goarch:
       - amd64
       - arm64
@@ -19,14 +20,17 @@ builds:
     goarm:
       - "7"
     ignore:
-      # k3s publishes linux/amd64, linux/arm64 and linux/armhf only; macOS
-      # has no 32-bit arm build.
       - goos: darwin
+        goarch: arm
+      - goos: windows
         goarch: arm
 
 archives:
   - format: tar.gz
     name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
 
 checksum:
   name_template: checksums.txt
@@ -43,6 +47,82 @@ brews:
       bin.install "k3sctl"
     test: |
       system "#{bin}/k3sctl", "version"
+
+chocolateys:
+  - name: k3sctl
+    owners: nirantarasi
+    authors: nirantarasi
+    project_url: "https://github.com/nirantarasi/k3sctl"
+    url_template: "https://github.com/nirantarasi/k3sctl/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    copyright: "2024 nirantarasi"
+    license_url: "https://github.com/nirantarasi/k3sctl/blob/main/LICENSE"
+    require_license_acceptance: false
+    bug_tracker_url: "https://github.com/nirantarasi/k3sctl/issues"
+    description: "CLI tool to manage k3s Kubernetes clusters"
+    tags: "kubernetes k3s cluster cli devops"
+    summary: "k3sctl manages k3s Kubernetes clusters"
+    release_notes: "https://github.com/nirantarasi/k3sctl/releases/tag/{{ .Tag }}"
+    api_key: "{{ .Env.CHOCOLATEY_API_KEY }}"
+    source_repo: "https://push.chocolatey.org/"
+    skip_publish: false
+
+winget:
+  - name: k3sctl
+    publisher: nirantarasi
+    short_description: "CLI tool to manage k3s Kubernetes clusters"
+    license: MIT
+    publisher_url: "https://github.com/nirantarasi"
+    publisher_support_url: "https://github.com/nirantarasi/k3sctl/issues"
+    package_identifier: "nirantarasi.k3sctl"
+    url_template: "https://github.com/nirantarasi/k3sctl/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
+    commit_author:
+      name: nirantarasi
+      email: vinaykumaree5@gmail.com
+    homepage: "https://github.com/nirantarasi/k3sctl"
+    license_url: "https://github.com/nirantarasi/k3sctl/blob/main/LICENSE"
+    copyright: "2024 nirantarasi"
+    release_notes_url: "https://github.com/nirantarasi/k3sctl/releases/tag/{{ .Tag }}"
+    tags:
+      - kubernetes
+      - k3s
+      - cli
+      - devops
+    repository:
+      owner: nirantarasi
+      name: winget-pkgs
+      branch: "k3sctl-{{ .Version }}"
+      token: "{{ .Env.WINGET_GITHUB_TOKEN }}"
+      pull_request:
+        enabled: true
+        base:
+          owner: microsoft
+          name: winget-pkgs
+          branch: master
+
+nfpms:
+  - id: k3sctl
+    package_name: k3sctl
+    homepage: "https://github.com/nirantarasi/k3sctl"
+    maintainer: "nirantarasi <vinaykumaree5@gmail.com>"
+    description: "CLI tool to manage k3s Kubernetes clusters"
+    license: MIT
+    formats:
+      - apk
+      - deb
+      - rpm
+    bindir: /usr/bin
+
+aurs:
+  - name: k3sctl-bin
+    homepage: "https://github.com/nirantarasi/k3sctl"
+    description: "CLI tool to manage k3s Kubernetes clusters"
+    maintainers:
+      - "nirantarasi <vinaykumaree5@gmail.com>"
+    license: MIT
+    private_key: "{{ .Env.AUR_SSH_KEY }}"
+    git_url: "ssh://aur@aur.archlinux.org/k3sctl-bin.git"
+    package: |-
+      install -Dm755 k3sctl "${pkgdir}/usr/bin/k3sctl"
 
 changelog:
   sort: asc
