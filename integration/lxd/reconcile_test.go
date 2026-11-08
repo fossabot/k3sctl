@@ -30,6 +30,7 @@ import (
 //  7. Re-apply with Traefik re-enabled (remove disable stanza).
 //  8. Verify config.yaml no longer has the disable field.
 //  9. Verify Traefik is running again.
+//
 // 10. Final idempotency — re-apply same enabled config.
 func TestLXDConfigReconciliation(t *testing.T) {
 	setup := newLXDTestSetup(t, "reconcile")
