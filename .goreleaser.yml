@@ -48,39 +48,6 @@ brews:
     test: |
       system "#{bin}/k3sctl", "version"
 
-winget:
-  - name: k3sctl
-    publisher: nirantarasi
-    short_description: "CLI tool to manage k3s Kubernetes clusters"
-    license: MIT
-    publisher_url: "https://github.com/nirantarasi"
-    publisher_support_url: "https://github.com/nirantarasi/k3sctl/issues"
-    package_identifier: "nirantarasi.k3sctl"
-    url_template: "https://github.com/nirantarasi/k3sctl/releases/download/{{ .Tag }}/{{ .ArtifactName }}"
-    commit_author:
-      name: nirantarasi
-      email: vinaykumaree5@gmail.com
-    homepage: "https://github.com/nirantarasi/k3sctl"
-    license_url: "https://github.com/nirantarasi/k3sctl/blob/main/LICENSE"
-    copyright: "2024 nirantarasi"
-    release_notes_url: "https://github.com/nirantarasi/k3sctl/releases/tag/{{ .Tag }}"
-    tags:
-      - kubernetes
-      - k3s
-      - cli
-      - devops
-    repository:
-      owner: nirantarasi
-      name: winget-pkgs
-      branch: "k3sctl-{{ .Version }}"
-      token: "{{ .Env.WINGET_GITHUB_TOKEN }}"
-      pull_request:
-        enabled: true
-        base:
-          owner: microsoft
-          name: winget-pkgs
-          branch: master
-
 nfpms:
   - id: k3sctl
     package_name: k3sctl
