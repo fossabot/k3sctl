@@ -36,6 +36,9 @@ func (p *GetKubeconfig) ShouldRun() bool {
 func (p *GetKubeconfig) Run(_ context.Context) error {
 	h := p.leader
 	kubeconfigPath := "/etc/rancher/k3s/k3s.yaml"
+	if kc := p.Config.Spec.K3s.Kubeconfig; kc != nil && kc.Path != "" {
+		kubeconfigPath = kc.Path
+	}
 
 	slog.Info(fmt.Sprintf("%s: reading kubeconfig from %s", h, kubeconfigPath))
 	output, err := h.Sudo().ExecOutput(fmt.Sprintf("cat %s", shellQuote(kubeconfigPath)))
