@@ -11,7 +11,6 @@ import (
 	"log/slog"
 
 	"github.com/nirantarasi/k3sctl/pkg/apis/k3sctl.k3sproject.io/v1beta1/cluster"
-	"gopkg.in/yaml.v2"
 )
 
 type ConfigureK3s struct {
@@ -70,7 +69,6 @@ func (p *ConfigureK3s) Run(ctx context.Context) error {
 		if configChanged {
 			h.Metadata.NeedsConfigRestart = true
 			slog.Info(fmt.Sprintf("%s: config.yaml changed, will restart K3s", h))
-			p.cleanupStaleSkipFiles(h)
 		}
 
 		return nil
@@ -126,59 +124,3 @@ func configBytesEqual(existing, desired []byte) bool {
 	return strings.TrimSpace(string(existing)) == strings.TrimSpace(string(desired))
 }
 
-// cleanupStaleSkipFiles removes .skip files in the K3s manifests directory for
-// components that were previously disabled but are no longer in the disable
-// list. K3s creates these files when --disable is set but does not remove them
-// when the flag is dropped, so re-enabled components stay disabled after a
-// restart unless the skip files are cleaned up.
-func (p *ConfigureK3s) cleanupStaleSkipFiles(h *cluster.Host) {
-	oldDisabled := disabledComponentsFromYAML(h.Metadata.K3sExistingConfig)
-	newDisabled := make(map[string]bool)
-	if d := p.Config.Spec.K3s.Disable; d != nil {
-		for _, c := range d.Components {
-			newDisabled[c] = true
-		}
-	}
-
-	manifestsDir := fmt.Sprintf("%s/server/manifests", h.K3sDataDir())
-	for _, comp := range oldDisabled {
-		if newDisabled[comp] {
-			continue
-		}
-		skipFile := fmt.Sprintf("%s/%s.skip", manifestsDir, comp)
-		if h.Sudo().FS().FileExist(skipFile) {
-			if err := h.Sudo().FS().Remove(skipFile); err != nil {
-				slog.Warn(fmt.Sprintf("%s: failed to remove skip file %s: %v", h, skipFile, err))
-			} else {
-				slog.Info(fmt.Sprintf("%s: removed %s (component re-enabled)", h, skipFile))
-			}
-		}
-	}
-}
-
-func disabledComponentsFromYAML(configYAML string) []string {
-	if configYAML == "" {
-		return nil
-	}
-	var parsed map[string]interface{}
-	if err := yaml.Unmarshal([]byte(configYAML), &parsed); err != nil {
-		return nil
-	}
-	raw, ok := parsed["disable"]
-	if !ok {
-		return nil
-	}
-	switch v := raw.(type) {
-	case []interface{}:
-		out := make([]string, 0, len(v))
-		for _, item := range v {
-			if s, ok := item.(string); ok {
-				out = append(out, s)
-			}
-		}
-		return out
-	case string:
-		return []string{v}
-	}
-	return nil
-}
