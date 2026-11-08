@@ -49,6 +49,9 @@ type Options struct {
 	// APICheck probes the Kubernetes API. It defaults to CheckAPIServer and is
 	// overridable in tests so the runner does not need a reachable cluster.
 	APICheck func(ctx context.Context, address string) error
+	// PostApplyVerify runs after the standard verification passes, before
+	// cleanup. Use it to check that custom flags took effect on the nodes.
+	PostApplyVerify func(ctx context.Context, nodes []environment.Node) error
 
 	ApplyTimeout     time.Duration
 	ProvisionTimeout time.Duration
@@ -60,8 +63,14 @@ type Options struct {
 // Runner orchestrates provisioning, installation and verification. It is not
 // safe for concurrent use.
 type Runner struct {
-	options Options
-	applied bool
+	options      Options
+	applied      bool
+	k3sOverrides *K3sOverrides
+}
+
+// SetK3sOverrides configures additional K3s flags for the generated manifest.
+func (r *Runner) SetK3sOverrides(overrides *K3sOverrides) {
+	r.k3sOverrides = overrides
 }
 
 // NewRunner validates options and returns a runner.
@@ -169,6 +178,12 @@ func (r *Runner) Run(ctx context.Context) (runErr error) {
 		return err
 	}
 
+	if r.options.PostApplyVerify != nil {
+		if err := r.options.PostApplyVerify(ctx, nodes); err != nil {
+			return fmt.Errorf("post-apply verification: %w", err)
+		}
+	}
+
 	slog.Info("multi-node K3s integration test passed")
 	return nil
 }
@@ -179,6 +194,7 @@ func (r *Runner) writeConfig(nodes []environment.Node) (string, error) {
 		K3sVersion: r.options.K3sVersion,
 		KeyPath:    r.options.KeyPath,
 		Nodes:      nodes,
+		K3s:        r.k3sOverrides,
 	}.Generate()
 	if err != nil {
 		return "", fmt.Errorf("generate cluster config: %w", err)

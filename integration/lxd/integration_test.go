@@ -7,12 +7,14 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/vinaycharlie01/k3sctl/integration/environment"
 	"github.com/vinaycharlie01/k3sctl/integration/lxd"
 	"github.com/vinaycharlie01/k3sctl/integration/multinode"
+	"github.com/vinaycharlie01/k3sctl/pkg/apis/k3sctl.k3sproject.io/v1beta1/cluster"
 )
 
 const defaultIntegrationK3sVersion = "v1.37.1+k3s1"
@@ -135,6 +137,145 @@ func TestLXDMultiNodeK3s(t *testing.T) {
 
 	if err := runner.Run(ctx); err != nil {
 		t.Fatalf("multi-node K3s integration test failed: %v", err)
+	}
+}
+
+// TestLXDExtendedFlags provisions a single-server + 1 agent cluster with
+// K3s configuration flags enabled: preferBundledBin, supervisorMetrics,
+// enablePprof, kubeconfig mode, agent lbServerPort, embedded registry, and
+// custom labels. After install it verifies the flags took effect by inspecting
+// the K3s config file and node labels.
+func TestLXDExtendedFlags(t *testing.T) {
+	setup := newLXDTestSetup(t, "flags")
+
+	workDir := t.TempDir()
+	keyPair, err := multinode.GenerateSSHKey(filepath.Join(workDir, "keys"))
+	if err != nil {
+		t.Fatalf("GenerateSSHKey() error = %v", err)
+	}
+
+	provider, err := lxd.New(context.Background(), lxd.Config{
+		RunID:            setup.runID,
+		ImageAlias:       "24.04",
+		SSHUser:          "ubuntu",
+		SSHPort:          22,
+		SSHAuthorizedKey: keyPair.AuthorizedKey,
+		Nodes: []lxd.NodeSpec{
+			{Name: "server", Role: environment.RoleServer},
+			{Name: "agent1", Role: environment.RoleAgent},
+		},
+	})
+	if err != nil {
+		t.Fatalf("connect to LXD: %v", err)
+	}
+
+	t.Cleanup(func() {
+		cleanupCtx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+		defer cancel()
+		if err := provider.Destroy(cleanupCtx); err != nil {
+			t.Logf("fallback LXD cleanup: %v", err)
+		}
+	})
+
+	sshRunner := &multinode.SSHRunner{
+		User:    "ubuntu",
+		Port:    22,
+		KeyPath: keyPair.PrivateKeyPath,
+		Timeout: 30 * time.Second,
+	}
+
+	runner, err := multinode.NewRunner(multinode.Options{
+		Binary:       setup.binary,
+		WorkDir:      workDir,
+		KeyPath:      keyPair.PrivateKeyPath,
+		ArtifactDir:  setup.artifactDir,
+		ClusterName:  "k3sctl-" + setup.runID,
+		K3sVersion:   setup.k3sVersion,
+		Environment:  provider,
+		Remote:       sshRunner,
+		ApplyTimeout: 25 * time.Minute,
+		PostApplyVerify: func(ctx context.Context, nodes []environment.Node) error {
+			serverNode := findNodeByRole(nodes, environment.RoleServer)
+			agentNode := findNodeByRole(nodes, environment.RoleAgent)
+
+			if serverNode != nil {
+				for _, key := range []string{
+					"prefer-bundled-bin",
+					"supervisor-metrics",
+					"enable-pprof",
+				} {
+					verifyK3sConfigKey(t, sshRunner, ctx, serverNode.Address, key)
+				}
+				verifyNodeLabel(t, sshRunner, ctx, serverNode.Address, "k3sctl-test=extended-flags")
+			}
+
+			if agentNode != nil {
+				for _, key := range []string{
+					"prefer-bundled-bin",
+					"lb-server-port",
+				} {
+					verifyK3sConfigKey(t, sshRunner, ctx, agentNode.Address, key)
+				}
+			}
+			return nil
+		},
+	})
+	if err != nil {
+		t.Fatalf("NewRunner() error = %v", err)
+	}
+
+	runner.SetK3sOverrides(&multinode.K3sOverrides{
+		Security:         &cluster.SecurityConfig{PreferBundledBin: true},
+		Server:           &cluster.ServerConfig{SupervisorMetrics: true, EnablePprof: true},
+		Kubeconfig:       &cluster.KubeconfigConfig{Mode: "0600"},
+		Agent:            &cluster.AgentConfig{LBServerPort: 6444},
+		EmbeddedRegistry: &cluster.EmbeddedRegistryConfig{Enabled: true},
+		Labels:           map[string]string{"k3sctl-test": "extended-flags"},
+	})
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+	defer cancel()
+
+	if err := runner.Run(ctx); err != nil {
+		t.Fatalf("extended flags integration test failed: %v", err)
+	}
+}
+
+func findNodeByRole(nodes []environment.Node, role environment.Role) *environment.Node {
+	for i := range nodes {
+		if nodes[i].Role == role {
+			return &nodes[i]
+		}
+	}
+	return nil
+}
+
+func verifyK3sConfigKey(t *testing.T, ssh *multinode.SSHRunner, ctx context.Context, address, key string) {
+	t.Helper()
+	result, err := ssh.Run(ctx, address, "sudo cat /etc/rancher/k3s/config.yaml")
+	if err != nil {
+		t.Errorf("failed to read K3s config on %s: %v", address, err)
+		return
+	}
+	if !strings.Contains(result.Stdout, key) {
+		t.Errorf("K3s config on %s does not contain key %q", address, key)
+	}
+}
+
+func verifyNodeLabel(t *testing.T, ssh *multinode.SSHRunner, ctx context.Context, address, labelKV string) {
+	t.Helper()
+	result, err := ssh.Run(ctx, address, "sudo /usr/local/bin/k3s kubectl get nodes -o json")
+	if err != nil {
+		t.Errorf("failed to get nodes on %s: %v", address, err)
+		return
+	}
+	parts := strings.SplitN(labelKV, "=", 2)
+	if len(parts) != 2 {
+		t.Errorf("invalid label kv: %q", labelKV)
+		return
+	}
+	if !strings.Contains(result.Stdout, parts[0]) {
+		t.Errorf("node labels on %s do not contain key %q", address, parts[0])
 	}
 }
 
