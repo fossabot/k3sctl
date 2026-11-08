@@ -7,8 +7,8 @@ import (
 
 	"log/slog"
 
-	"github.com/urfave/cli/v2"
 	"github.com/nirantarasi/k3sctl/action"
+	"github.com/urfave/cli/v2"
 )
 
 func applyCommand() *cli.Command {

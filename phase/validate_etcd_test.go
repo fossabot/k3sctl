@@ -5,9 +5,9 @@ import (
 	"testing"
 
 	"github.com/k0sproject/rig/v2/protocol/ssh"
-	"github.com/stretchr/testify/assert"
 	"github.com/nirantarasi/k3sctl/pkg/apis/k3sctl.k3sproject.io/v1beta1"
 	"github.com/nirantarasi/k3sctl/pkg/apis/k3sctl.k3sproject.io/v1beta1/cluster"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestValidateEtcdMembers_Prepare(t *testing.T) {

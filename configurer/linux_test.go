@@ -4,9 +4,9 @@ import (
 	"testing"
 
 	rigos "github.com/k0sproject/rig/v2/os"
+	"github.com/nirantarasi/k3sctl/configurer"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/nirantarasi/k3sctl/configurer"
 
 	_ "github.com/nirantarasi/k3sctl/configurer/linux"
 	_ "github.com/nirantarasi/k3sctl/configurer/linux/enterpriselinux"
