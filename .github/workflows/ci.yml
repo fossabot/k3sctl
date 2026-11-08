@@ -18,7 +18,7 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Install Task
-        run: go install github.com/go-task/task/v3@v3.40.1
+        run: go install github.com/go-task/task/v3/cmd/task@v3.40.1
       - name: Load Taskfile
         run: task --list
       - name: Check formatting
@@ -34,7 +34,7 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Install Task
-        run: go install github.com/go-task/task/v3@v3.40.1
+        run: go install github.com/go-task/task/v3/cmd/task@v3.40.1
       - name: Test
         run: task test-race
       - uses: actions/upload-artifact@v4
@@ -52,7 +52,7 @@ jobs:
         with:
           go-version-file: go.mod
       - name: Install Task
-        run: go install github.com/go-task/task/v3@v3.40.1
+        run: go install github.com/go-task/task/v3/cmd/task@v3.40.1
       - name: Build
         run: task build
       - name: Cross-compile

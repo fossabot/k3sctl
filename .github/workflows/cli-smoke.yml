@@ -31,7 +31,7 @@ jobs:
           go-version-file: go.mod
 
       - name: Install Task
-        run: go install github.com/go-task/task/v3@v3.40.1
+        run: go install github.com/go-task/task/v3/cmd/task@v3.40.1
 
       - name: Build CLI
         run: task build
