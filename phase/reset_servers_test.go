@@ -51,4 +51,3 @@ func TestResetServers_LeaderExcluded(t *testing.T) {
 
 	assert.Empty(t, p.hosts, "leader should not be included in reset hosts")
 }
-
