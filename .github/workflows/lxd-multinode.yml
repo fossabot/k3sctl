@@ -89,10 +89,10 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      - uses: arduino/setup-task@v2
+      - uses: arduino/setup-task@v3
         with:
-          version: 3.54.0
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          version: 3.x
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup LXD
         uses: canonical/setup-lxd@main

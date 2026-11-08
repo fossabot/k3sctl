@@ -62,10 +62,10 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - uses: arduino/setup-task@v2
+      - uses: arduino/setup-task@v3
         with:
-          version: 3.54.0
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          version: 3.x
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build k3sctl
         run: task build

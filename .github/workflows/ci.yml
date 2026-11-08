@@ -17,10 +17,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - uses: arduino/setup-task@v2
+      - uses: arduino/setup-task@v3
         with:
-          version: 3.54.0
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          version: 3.x
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Load Taskfile
         run: task --list
       - name: Check formatting
@@ -35,10 +35,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - uses: arduino/setup-task@v2
+      - uses: arduino/setup-task@v3
         with:
-          version: 3.54.0
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          version: 3.x
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Test
         run: task test-race
       - uses: actions/upload-artifact@v4
@@ -55,10 +55,10 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - uses: arduino/setup-task@v2
+      - uses: arduino/setup-task@v3
         with:
-          version: 3.54.0
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          version: 3.x
+          token: ${{ secrets.GITHUB_TOKEN }}
       - name: Build
         run: task build
       - name: Cross-compile
