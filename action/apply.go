@@ -15,6 +15,8 @@ type ApplyOptions struct {
 	KubeconfigAPIAddress  string
 	KubeconfigUser        string
 	KubeconfigCluster     string
+	NoSaveKubeconfig      bool
+	KubeconfigSavePath    string
 }
 
 func Apply(opts ApplyOptions) *phase.Manager {
@@ -62,12 +64,16 @@ func Apply(opts ApplyOptions) *phase.Manager {
 		&phase.PostApplyHealthCheck{},
 	)
 
-	if opts.KubeconfigOut != nil {
-		m.AddPhase(&phase.GetKubeconfig{
-			Out:        opts.KubeconfigOut,
-			APIAddress: opts.KubeconfigAPIAddress,
-			User:       opts.KubeconfigUser,
-			Cluster:    opts.KubeconfigCluster,
+	m.AddPhase(&phase.GetKubeconfig{
+		Out:        opts.KubeconfigOut,
+		APIAddress: opts.KubeconfigAPIAddress,
+		User:       opts.KubeconfigUser,
+		Cluster:    opts.KubeconfigCluster,
+	})
+
+	if !opts.NoSaveKubeconfig {
+		m.AddPhase(&phase.SaveKubeconfig{
+			Path: opts.KubeconfigSavePath,
 		})
 	}
 
