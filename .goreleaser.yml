@@ -34,7 +34,7 @@ checksum:
 brews:
   - repository:
       owner: nirantarasi
-      name: homebrew-k3sctl
+      name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     homepage: "https://github.com/nirantarasi/k3sctl"
     description: "CLI tool to manage k3s Kubernetes clusters"
