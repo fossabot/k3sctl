@@ -112,17 +112,6 @@ nfpms:
       - rpm
     bindir: /usr/bin
 
-aurs:
-  - name: k3sctl-bin
-    homepage: "https://github.com/nirantarasi/k3sctl"
-    description: "CLI tool to manage k3s Kubernetes clusters"
-    maintainers:
-      - "nirantarasi <vinaykumaree5@gmail.com>"
-    license: MIT
-    private_key: "{{ .Env.AUR_SSH_KEY }}"
-    git_url: "ssh://aur@aur.archlinux.org/k3sctl-bin.git"
-    package: |-
-      install -Dm755 k3sctl "${pkgdir}/usr/bin/k3sctl"
 
 changelog:
   sort: asc
