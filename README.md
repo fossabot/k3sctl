@@ -5,7 +5,7 @@
 </p>
 
 `k3sctl` is a declarative lifecycle management tool for [K3s](https://k3s.io)
-clusters, created and inspired by [k0sctl](https://github.com/k0sproject/k0sctl). Point it
+clusters. Point it
 at a YAML file describing your hosts and it will install, upgrade, reconfigure,
 back up and reset the cluster over SSH.
 

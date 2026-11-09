@@ -11,9 +11,9 @@
 - [ ] `.gitignore` for Go projects
 
 ### 1.2 Retry & Utility Packages
-- [ ] `pkg/retry/retry.go` — direct port
+- [ ] `pkg/retry/retry.go`
 - [ ] `pkg/retry/retry_test.go`
-- [ ] `pkg/manifest/reader.go` — direct port
+- [ ] `pkg/manifest/reader.go`
 - [ ] `pkg/manifest/reader_test.go`
 
 ### 1.3 CLI Framework
@@ -27,19 +27,19 @@
 **Goal**: Full config data model with validation
 
 ### 2.1 Core Types
-- [ ] `pkg/apis/.../cluster/quote.go` — direct port
-- [ ] `pkg/apis/.../cluster/flags.go` — direct port
+- [ ] `pkg/apis/.../cluster/quote.go`
+- [ ] `pkg/apis/.../cluster/flags.go`
 - [ ] `pkg/apis/.../cluster/flags_test.go`
 - [ ] `pkg/apis/.../cluster/flags_quoting_test.go`
-- [ ] `pkg/apis/.../cluster/hook.go` — direct port
-- [ ] `pkg/apis/.../cluster/uploadfile.go` — direct port
+- [ ] `pkg/apis/.../cluster/hook.go`
+- [ ] `pkg/apis/.../cluster/uploadfile.go`
 - [ ] `pkg/apis/.../cluster/uploadfile_test.go`
-- [ ] `pkg/apis/.../cluster/options.go` — direct port
-- [ ] `pkg/apis/.../cluster/k3s.go` — K3s config type (adapted from k0s.go)
+- [ ] `pkg/apis/.../cluster/options.go`
+- [ ] `pkg/apis/.../cluster/k3s.go` — K3s config type
 - [ ] `pkg/apis/.../cluster/k3s_test.go`
 
 ### 2.2 Host & Cluster Types
-- [ ] `pkg/apis/.../cluster/host.go` — K3s host type (major adaptation)
+- [ ] `pkg/apis/.../cluster/host.go` — K3s host type
 - [ ] `pkg/apis/.../cluster/host_test.go`
 - [ ] `pkg/apis/.../cluster/host_posix_test.go`
 - [ ] `pkg/apis/.../cluster/hosts.go` — with Servers()/Agents()
@@ -58,8 +58,8 @@
 
 ### 3.1 Core Configurer
 - [ ] `configurer/interface.go` — K3s configurer interface
-- [ ] `configurer/host.go` — direct port
-- [ ] `configurer/registry.go` — direct port
+- [ ] `configurer/host.go`
+- [ ] `configurer/registry.go`
 - [ ] `configurer/linux.go` — K3s default paths
 
 ### 3.2 Linux Distro Modules
@@ -86,14 +86,14 @@
 **Goal**: Phase execution framework and connectivity
 
 ### 4.1 Phase Manager
-- [ ] `phase/manager.go` — direct port
+- [ ] `phase/manager.go`
 - [ ] `phase/manager_test.go`
-- [ ] `phase/generic_phase.go` — direct port
+- [ ] `phase/generic_phase.go`
 
 ### 4.2 Connectivity Phases
-- [ ] `phase/connect.go` — direct port
+- [ ] `phase/connect.go`
 - [ ] `phase/connect_test.go`
-- [ ] `phase/disconnect.go` — direct port
+- [ ] `phase/disconnect.go`
 - [ ] `phase/detect_os.go`
 - [ ] `phase/lock.go` + `phase/unlock.go`
 - [ ] `phase/prepare_hosts.go`

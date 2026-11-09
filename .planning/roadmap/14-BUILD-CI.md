@@ -1,30 +1,32 @@
 # 14: Build System, CI, and Release
 
-## Makefile
-- **Source**: `k0sctl/Makefile` (128 lines)
-- **Changes**:
-  - Binary name: `k3sctl` instead of `k0sctl`
-  - LD_FLAGS: `github.com/nirantarasi/k3sctl/version.Environment`
-  - Build targets: same cross-platform approach
-  - **Remove**: `k3sctl-win-amd64.exe` — no Windows support for K3s
-  - Keep: linux-amd64, linux-arm64, linux-arm, linux-riscv64, darwin-amd64, darwin-arm64
-  - Docker image: `ghcr.io/nirantarasi/k3sctl` (if applicable)
-  - Smoke test targets: adapt for k3sctl smoke tests
-  - Lint: same golangci-lint integration
-  - Test: `go test -v ./...`
+## Taskfile.yml
 
-### k3sctl Makefile Targets
-```makefile
-k3sctl:              # Build for local platform
-build-all:           # Cross-compile all platforms
-test:                # Run unit tests
-lint:                # Run golangci-lint
-clean:               # Remove build artifacts
-install:             # Install to /usr/local/bin
+- Binary name: `k3sctl`
+- LD_FLAGS: `github.com/nirantarasi/k3sctl/version.Environment`
+- Build targets: cross-platform (no Windows for K3s)
+- Keep: linux-amd64, linux-arm64, linux-arm, linux-riscv64, darwin-amd64, darwin-arm64
+- Lint: golangci-lint integration
+- Test: `go test -v ./...`
+
+### k3sctl Task Targets
+```
+build:       # Build for local platform
+build-all:   # Cross-compile all platforms
+test:        # Run unit tests
+test-race:   # Run tests with race detector
+lint:        # Run golangci-lint
+vet:         # Run go vet
+fmt:         # Format code
+check-fmt:   # Check formatting
+check:       # check-fmt + lint
+clean:       # Remove build artifacts
+install:     # Install to /usr/local/bin
+generate:    # Run go generate
 ```
 
 ## Build Flags
-```makefile
+```
 LD_FLAGS = -s -w \
   -X github.com/nirantarasi/k3sctl/version.Environment=$(ENVIRONMENT) \
   -X github.com/carlmjohnson/versioninfo.Revision=$(GIT_COMMIT) \
@@ -38,63 +40,36 @@ BUILD_FLAGS = -trimpath -a \
 
 ## GitHub Actions Workflows
 
-### `.github/workflows/go.yml` — Unit Tests
-- **Source**: `k0sctl/.github/workflows/go.yml`
-- **Changes**:
-  - Trigger: PRs touching `**.go`, `go.mod`, `go.sum`, `Taskfile.yml`
-  - Matrix: ubuntu-latest, macos-latest (remove windows-latest)
-  - Steps: checkout → setup-go → `go test -v ./...`
-  - Build job: `task build-all`
+### `.github/workflows/ci.yml` — Unit Tests & Build
+- Trigger: PRs touching `**.go`, `go.mod`, `go.sum`, `Taskfile.yml`
+- Matrix: ubuntu-latest, macos-latest (no Windows)
+- Steps: checkout → setup-go → `task check-fmt` → `task vet` → `task test-race` → `task build` → `task build-all`
 
-### `.github/workflows/golangci-lint.yml` — Linting
-- **Source**: `k0sctl/.github/workflows/golangci-lint.yml`
-- **Changes**: Import paths in config, same golangci-lint version
+### `.github/workflows/cli-smoke.yml` — CLI Smoke Tests
+- Builds binary and asserts it works on ubuntu-latest and macos-latest
+- Tests: version, help, completion, init output, error handling
+
+### `.github/workflows/real-install.yml` — Real Install Test
+- On ubuntu-24.04, builds CLI and runs full apply/reset cycle
+- Nightly + manual dispatch + path-filtered pushes
 
 ### `.github/workflows/release.yml` — Release
-- **Source**: `k0sctl/.github/workflows/release.yml`
-- **Changes**:
-  - Trigger: push tags `v*`
-  - Build: `task build-all`
-  - Upload artifacts: `bin/k3sctl-*`
-  - Docker image build: adapt for k3sctl
-  - GitHub release: draft with checksums
+- Trigger: push tags `v*`
+- Build: `task build-all`
+- Upload artifacts: `bin/k3sctl-*`
+- GitHub release: draft with checksums
 
-### `.github/workflows/smoke.yml` — Smoke Tests (Future)
-- **Source**: `k0sctl/.github/workflows/smoke.yml`
-- **Changes**: Adapt for k3sctl smoke tests when implemented
-- Matrix of OS images for testing
-
-### `.github/workflows/codeql-analysis.yml` — Security
-- **Source**: `k0sctl/.github/workflows/codeql-analysis.yml`
-- **Changes**: Same CodeQL analysis, adapt language config
+### `.github/workflows/codeql.yml` — Security
+- CodeQL analysis for Go
 
 ## Dockerfile
-- **Source**: `k0sctl/Dockerfile`
-- **Changes**:
-  - Base: same multi-stage build
-  - Binary: `k3sctl` instead of `k0sctl`
-  - Build args: same (ENVIRONMENT, GIT_COMMIT, TAG_NAME)
-  - Entrypoint: `["/k3sctl"]`
+- Multi-stage build
+- Binary: `k3sctl`
+- Build args: ENVIRONMENT, GIT_COMMIT, TAG_NAME
+- Entrypoint: `["/k3sctl"]`
 
 ## `.golangci.yml`
-- **Source**: `k0sctl/.golangci.yml`
-- **Changes**: Import paths in any linter exceptions, same rules
-
-## Implementation Priority
-
-### Phase 1 (MVP Build)
-1. `Makefile` with `k3sctl`, `test`, `lint`, `build-all` targets
-2. `.golangci.yml` linter config
-3. `go.mod` with correct module path and dependencies
-
-### Phase 2 (CI)
-1. `.github/workflows/go.yml` — unit tests
-2. `.github/workflows/golangci-lint.yml` — linting
-3. `.github/workflows/release.yml` — release pipeline
-
-### Phase 3 (Smoke Tests)
-1. `smoke-test/` infrastructure
-2. `.github/workflows/smoke.yml`
+- golangci-lint v2 config
 
 ## Cross-Platform Build Matrix
 

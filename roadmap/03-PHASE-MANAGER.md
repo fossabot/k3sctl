@@ -1,6 +1,6 @@
 # Roadmap: Phase Manager & Generic Phase
 
-## Source Files (k0sctl)
+## Source Files
 
 ### phase/manager.go
 - `Manager` struct: phases []Phase, Config *v1beta1.Cluster, Concurrency int, ConcurrentUploads int, DryRun bool, Writer io.Writer, dryMessages map[string][]string
@@ -22,11 +22,9 @@
   6. After hook
 - On error: runs CleanUp on already-executed phases in reverse
 - Dry-run mode: collects messages per host, prints summary
-- **k3sctl**: Port as-is with k3sctl types. This is infrastructure code, not k0s-specific.
 
 ### phase/manager_test.go
 - Tests for phase execution order, conditional skipping, cleanup on failure, dry-run
-- **k3sctl**: Port directly
 
 ### phase/generic_phase.go
 - `GenericPhase` struct: embeds `*v1beta1.Cluster` config, `*Manager` pointer
@@ -41,7 +39,6 @@
   - `parallelDo(ctx, hosts, fn)` — parallel execution respecting `Manager.Concurrency`
   - `parallelDoUpload(ctx, hosts, fn)` — parallel execution respecting `Manager.ConcurrentUploads`
   - `runHooks(ctx, host, action, stage)` — execute hooks defined in host config
-- **k3sctl**: Port as-is. This is infrastructure code.
 
 ## Key Design Patterns
 
@@ -52,6 +49,6 @@
 5. **Error cleanup**: On failure, CleanUp runs in reverse phase order
 
 ## Implementation Order
-1. `phase/manager.go` + interfaces (direct port)
-2. `phase/generic_phase.go` (direct port)
-3. `phase/manager_test.go` (direct port)
+1. `phase/manager.go` + interfaces
+2. `phase/generic_phase.go`
+3. `phase/manager_test.go`

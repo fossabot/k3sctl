@@ -2,13 +2,11 @@
 
 ## Overview
 
-The phase engine is the execution core. It runs an ordered list of phases through a lifecycle: SetManager → Prepare → ShouldRun → Before → Run → After → CleanUp. This is architecture-neutral — identical for k3sctl.
+The phase engine is the execution core. It runs an ordered list of phases through a lifecycle: SetManager → Prepare → ShouldRun → Before → Run → After → CleanUp. This is architecture-neutral.
 
-## Files to Create
+## Files
 
 ### `phase/manager.go`
-- **Source**: `k0sctl/phase/manager.go` (~292 lines)
-- **Changes**: Only import path changes (`k0sctl` → `k3sctl`)
 - **Key types and interfaces**:
   - `Phase` interface: `Run(context.Context) error` + `Title() string`
   - `Phases` type: slice with `Index`, `Remove`, `InsertAfter`, `InsertBefore`, `Replace`
@@ -40,8 +38,6 @@ The phase engine is the execution core. It runs an ordered list of phases throug
   - `Colorize = aurora.NewAurora(false)`
 
 ### `phase/generic_phase.go`
-- **Source**: `k0sctl/phase/generic_phase.go` (~95 lines)
-- **Changes**: Only import path changes
 - **GenericPhase struct**: Embeds `Config *v1beta1.Cluster` and `manager *Manager`
 - **Methods**:
   - `GetConfig()` — accessor
@@ -56,8 +52,6 @@ The phase engine is the execution core. It runs an ordered list of phases throug
   - `runHooks(ctx, action, stage, hosts...)` — executes per-host hooks
 
 ### `phase/manager_test.go`
-- **Source**: `k0sctl/phase/manager_test.go`
-- **Changes**: Import paths only
 
 ## Execution Flow (Manager.Run)
 
@@ -74,7 +68,7 @@ for each phase:
   9. On error: run CleanUp() on all previously-run phases (reverse order implicitly)
 ```
 
-## Key Design Decisions (Preserved)
+## Key Design Decisions
 
 - Phases are composed in action files, not hardcoded in manager
 - `parallelDo` respects `Manager.Concurrency` (0 = unlimited)
