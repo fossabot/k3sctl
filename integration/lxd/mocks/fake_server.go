@@ -31,7 +31,7 @@ type FakeServer struct {
 	createProfileReturnsOnCall map[int]struct {
 		result1 error
 	}
-	DeleteInstanceStub        func(string) (lxda.Operation, error)
+	DeleteInstanceStub        func(string, bool) (lxda.Operation, error)
 	deleteInstanceMutex       sync.RWMutex
 	deleteInstanceArgsForCall []FakeServerDeleteInstanceArgs
 	deleteInstanceReturns     struct {
@@ -159,14 +159,16 @@ type FakeServer struct {
 		result1 lxda.Operation
 		result2 error
 	}
-	UpdateProfileStub        func(string, api.ProfilePut, string) error
+	UpdateProfileStub        func(string, api.ProfilePut, string) (lxda.Operation, error)
 	updateProfileMutex       sync.RWMutex
 	updateProfileArgsForCall []FakeServerUpdateProfileArgs
 	updateProfileReturns     struct {
-		result1 error
+		result1 lxda.Operation
+		result2 error
 	}
 	updateProfileReturnsOnCall map[int]struct {
-		result1 error
+		result1 lxda.Operation
+		result2 error
 	}
 	invocations      map[string][][]interface{}
 	callOrder        []string
@@ -186,6 +188,7 @@ type FakeServerCreateProfileArgs struct {
 // FakeServerDeleteInstanceArgs holds the arguments of one call to DeleteInstance.
 type FakeServerDeleteInstanceArgs struct {
 	Arg1 string
+	Arg2 bool
 }
 
 // FakeServerDeleteProfileArgs holds the arguments of one call to DeleteProfile.
@@ -382,16 +385,16 @@ func (fake *FakeServer) CreateProfileReturnsOnCall(i int, result1 error) {
 	}{result1}
 }
 
-func (fake *FakeServer) DeleteInstance(arg1 string) (lxda.Operation, error) {
+func (fake *FakeServer) DeleteInstance(arg1 string, arg2 bool) (lxda.Operation, error) {
 	fake.deleteInstanceMutex.Lock()
 	ret, specificReturn := fake.deleteInstanceReturnsOnCall[len(fake.deleteInstanceArgsForCall)]
-	fake.deleteInstanceArgsForCall = append(fake.deleteInstanceArgsForCall, FakeServerDeleteInstanceArgs{arg1})
+	fake.deleteInstanceArgsForCall = append(fake.deleteInstanceArgsForCall, FakeServerDeleteInstanceArgs{arg1, arg2})
 	stub := fake.DeleteInstanceStub
 	fakeReturns := fake.deleteInstanceReturns
-	fake.recordInvocation("DeleteInstance", []interface{}{arg1})
+	fake.recordInvocation("DeleteInstance", []interface{}{arg1, arg2})
 	fake.deleteInstanceMutex.Unlock()
 	if stub != nil {
-		return stub(arg1)
+		return stub(arg1, arg2)
 	}
 	if specificReturn {
 		return ret.result1, ret.result2
@@ -405,17 +408,17 @@ func (fake *FakeServer) DeleteInstanceCallCount() int {
 	return len(fake.deleteInstanceArgsForCall)
 }
 
-func (fake *FakeServer) DeleteInstanceCalls(stub func(string) (lxda.Operation, error)) {
+func (fake *FakeServer) DeleteInstanceCalls(stub func(string, bool) (lxda.Operation, error)) {
 	fake.deleteInstanceMutex.Lock()
 	defer fake.deleteInstanceMutex.Unlock()
 	fake.DeleteInstanceStub = stub
 }
 
-func (fake *FakeServer) DeleteInstanceArgsForCall(i int) string {
+func (fake *FakeServer) DeleteInstanceArgsForCall(i int) (string, bool) {
 	fake.deleteInstanceMutex.RLock()
 	defer fake.deleteInstanceMutex.RUnlock()
 	argsForCall := fake.deleteInstanceArgsForCall[i]
-	return argsForCall.Arg1
+	return argsForCall.Arg1, argsForCall.Arg2
 }
 
 func (fake *FakeServer) DeleteInstanceArgs() []FakeServerDeleteInstanceArgs {
@@ -1166,7 +1169,7 @@ func (fake *FakeServer) UpdateInstanceStateReturnsOnCall(i int, result1 lxda.Ope
 	}{result1, result2}
 }
 
-func (fake *FakeServer) UpdateProfile(arg1 string, arg2 api.ProfilePut, arg3 string) error {
+func (fake *FakeServer) UpdateProfile(arg1 string, arg2 api.ProfilePut, arg3 string) (lxda.Operation, error) {
 	fake.updateProfileMutex.Lock()
 	ret, specificReturn := fake.updateProfileReturnsOnCall[len(fake.updateProfileArgsForCall)]
 	fake.updateProfileArgsForCall = append(fake.updateProfileArgsForCall, FakeServerUpdateProfileArgs{arg1, arg2, arg3})
@@ -1178,9 +1181,9 @@ func (fake *FakeServer) UpdateProfile(arg1 string, arg2 api.ProfilePut, arg3 str
 		return stub(arg1, arg2, arg3)
 	}
 	if specificReturn {
-		return ret.result1
+		return ret.result1, ret.result2
 	}
-	return fakeReturns.result1
+	return fakeReturns.result1, fakeReturns.result2
 }
 
 func (fake *FakeServer) UpdateProfileCallCount() int {
@@ -1189,7 +1192,7 @@ func (fake *FakeServer) UpdateProfileCallCount() int {
 	return len(fake.updateProfileArgsForCall)
 }
 
-func (fake *FakeServer) UpdateProfileCalls(stub func(string, api.ProfilePut, string) error) {
+func (fake *FakeServer) UpdateProfileCalls(stub func(string, api.ProfilePut, string) (lxda.Operation, error)) {
 	fake.updateProfileMutex.Lock()
 	defer fake.updateProfileMutex.Unlock()
 	fake.UpdateProfileStub = stub
@@ -1210,27 +1213,30 @@ func (fake *FakeServer) UpdateProfileArgs() []FakeServerUpdateProfileArgs {
 	return args
 }
 
-func (fake *FakeServer) UpdateProfileReturns(result1 error) {
+func (fake *FakeServer) UpdateProfileReturns(result1 lxda.Operation, result2 error) {
 	fake.updateProfileMutex.Lock()
 	defer fake.updateProfileMutex.Unlock()
 	fake.UpdateProfileStub = nil
 	fake.updateProfileReturns = struct {
-		result1 error
-	}{result1}
+		result1 lxda.Operation
+		result2 error
+	}{result1, result2}
 }
 
-func (fake *FakeServer) UpdateProfileReturnsOnCall(i int, result1 error) {
+func (fake *FakeServer) UpdateProfileReturnsOnCall(i int, result1 lxda.Operation, result2 error) {
 	fake.updateProfileMutex.Lock()
 	defer fake.updateProfileMutex.Unlock()
 	fake.UpdateProfileStub = nil
 	if fake.updateProfileReturnsOnCall == nil {
 		fake.updateProfileReturnsOnCall = make(map[int]struct {
-			result1 error
+			result1 lxda.Operation
+			result2 error
 		})
 	}
 	fake.updateProfileReturnsOnCall[i] = struct {
-		result1 error
-	}{result1}
+		result1 lxda.Operation
+		result2 error
+	}{result1, result2}
 }
 
 func (fake *FakeServer) Invocations() map[string][][]interface{} {

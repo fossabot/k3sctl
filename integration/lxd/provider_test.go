@@ -380,7 +380,7 @@ func TestCreatePartialFailureTracksCreatedInstances(t *testing.T) {
 
 	fake.GetInstanceReturns(&api.Instance{Name: "x", Status: "Stopped", StatusCode: api.Stopped}, "etag", nil)
 	var deleted []string
-	fake.DeleteInstanceCalls(func(name string) (lxdclient.Operation, error) {
+	fake.DeleteInstanceCalls(func(name string, force bool) (lxdclient.Operation, error) {
 		deleted = append(deleted, name)
 		return successOperation(), nil
 	})
@@ -420,7 +420,7 @@ func TestDestroyStopsRunningInstancesBeforeDeleting(t *testing.T) {
 		}
 		return successOperation(), nil
 	})
-	fake.DeleteInstanceCalls(func(name string) (lxdclient.Operation, error) {
+	fake.DeleteInstanceCalls(func(name string, force bool) (lxdclient.Operation, error) {
 		actions = append(actions, name+":delete")
 		return successOperation(), nil
 	})
@@ -503,7 +503,7 @@ func TestDestroyContinuesAfterDeleteFailure(t *testing.T) {
 	}
 
 	var attempted []string
-	fake.DeleteInstanceCalls(func(name string) (lxdclient.Operation, error) {
+	fake.DeleteInstanceCalls(func(name string, force bool) (lxdclient.Operation, error) {
 		attempted = append(attempted, name)
 		if name == "k3sctl-run-1-agent1" {
 			return nil, errors.New("device busy")

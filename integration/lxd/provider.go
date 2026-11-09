@@ -61,12 +61,12 @@ type Server interface {
 
 	GetProfile(name string) (*api.Profile, string, error)
 	CreateProfile(profile api.ProfilesPost) error
-	UpdateProfile(name string, profile api.ProfilePut, ETag string) error
+	UpdateProfile(name string, profile api.ProfilePut, ETag string) (lxdclient.Operation, error)
 	DeleteProfile(name string) error
 
 	GetInstance(name string) (*api.Instance, string, error)
 	CreateInstance(instance api.InstancesPost) (lxdclient.Operation, error)
-	DeleteInstance(name string) (lxdclient.Operation, error)
+	DeleteInstance(name string, force bool) (lxdclient.Operation, error)
 	UpdateInstanceState(name string, state api.InstanceStatePut, ETag string) (lxdclient.Operation, error)
 	GetInstanceState(name string) (*api.InstanceState, string, error)
 	ExecInstance(name string, exec api.InstanceExecPost, args *lxdclient.InstanceExecArgs) (lxdclient.Operation, error)
@@ -476,7 +476,7 @@ func (p *Provider) deleteInstance(ctx context.Context, name string) error {
 		}
 	}
 
-	op, err := p.server.DeleteInstance(name)
+	op, err := p.server.DeleteInstance(name, true)
 	if err != nil {
 		if api.StatusErrorCheck(err, http.StatusNotFound) {
 			return nil
@@ -569,7 +569,7 @@ func (p *Provider) ensureProfile() error {
 	if profileMatches(profile, desired) {
 		return nil
 	}
-	if err := p.server.UpdateProfile(name, desired, etag); err != nil {
+	if _, err := p.server.UpdateProfile(name, desired, etag); err != nil {
 		return err
 	}
 	p.ownedProfile = true
