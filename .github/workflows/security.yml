@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run Trivy vulnerability scanner (filesystem)
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -39,7 +39,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run Trivy config scanner
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: config
           scan-ref: .
@@ -68,7 +68,7 @@ jobs:
       - name: Build binary
         run: task build
       - name: Run Trivy on compiled binary
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: rootfs
           scan-ref: bin/
