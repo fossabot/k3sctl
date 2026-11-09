@@ -1,4 +1,6 @@
 # k3sctl
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fnirantarasi%2Fk3sctl.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fnirantarasi%2Fk3sctl?ref=badge_shield)
+
 
 <p align="center">
   <img src="docs/images/k3sctlogo.png" alt="k3sctl logo" width="520">
@@ -474,3 +476,6 @@ via `go generate` (`task generate`); do not hand-write fakes.
 ## License
 
 Apache License 2.0. See [LICENSE](LICENSE).
+
+
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fnirantarasi%2Fk3sctl.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fnirantarasi%2Fk3sctl?ref=badge_large)
