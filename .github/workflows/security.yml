@@ -66,7 +66,10 @@ jobs:
       - name: Install Task
         run: go install github.com/go-task/task/v3/cmd/task@v3.40.1
       - name: Build binary
-        run: task build
+        run: |
+          task build
+          mkdir -p bin
+          mv k3sctl bin/
       - name: Run Trivy on compiled binary
         uses: aquasecurity/trivy-action@v0.36.0
         with:
